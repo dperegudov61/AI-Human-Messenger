@@ -99,13 +99,22 @@ function fetchJSON(url, opt, ms){
     .catch(function(){ tm.done(); return { status:0, ok:false, json:{} }; });
 }
 
+// адрес берём из двух источников и берём самый свежий по полю updated:
+// raw.githubusercontent может до 5 минут отдавать старое (он не учитывает ?v=),
+// а Pages после коммита обновляется за минуту — иногда быстрее рава.
 function getStatus(){
   var bust = '?v=' + Date.now();
-  return fetchJSON(RAW + bust, null, 8000).then(function(r){
-    if (r.ok && r.json && typeof r.json.url === 'string') return r.json;
-    return fetchJSON(LOCAL + bust, null, 6000).then(function(r2){
-      return (r2.ok && r2.json && typeof r2.json.url === 'string') ? r2.json : null;
-    });
+  var a = fetchJSON(LOCAL + bust, null, 6000);
+  var b = fetchJSON(RAW + bust, null, 9000);
+  return Promise.all([a, b]).then(function(res){
+    var best = null, bestT = -1;
+    for (var i = 0; i < res.length; i++) {
+      var r = res[i];
+      if (!r.ok || !r.json || typeof r.json.url !== 'string') continue;
+      var t = Date.parse(r.json.updated || '') || 0;
+      if (t >= bestT) { bestT = t; best = r.json; }
+    }
+    return best;
   });
 }
 
