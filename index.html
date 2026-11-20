@@ -67,9 +67,16 @@ button:disabled{opacity:.55;cursor:default}
 'use strict';
 
 // ---------- где искать адрес сервера ----------
-var RAW    = 'https://raw.githubusercontent.com/dperegudov61/AI-bot-chat/main/status.json';
+// Адрес туннеля меняется при каждом перезапуске, поэтому его источники проверяются
+// все сразу и берётся самый свежий: API GitHub отдаёт файл без задержки кэша,
+// Pages/raw — с задержкой в десятки секунд, память устройства — на случай, если
+// ничего не ответило.
+var REPO   = 'dperegudov61/AI-bot-chat';
+var API    = 'https://api.github.com/repos/' + REPO + '/contents/status.json';
+var RAW    = 'https://raw.githubusercontent.com/' + REPO + '/main/status.json';
 var LOCAL  = 'status.json';
-var KEY    = 'door.key';
+var KEY    = 'door.key';     // быстрый ключ этого устройства (вход без пароля)
+var URLKEY = 'door.url';     // последний адрес сервера, который ответил
 
 var $ = function(id){ return document.getElementById(id); };
 var state = { url:'', online:false };
@@ -81,6 +88,11 @@ function setState(cls, text){
 function err(t){ $('err').textContent = t || ''; $('okmsg').textContent = ''; }
 function ok(t){ $('okmsg').textContent = t || ''; $('err').textContent = ''; }
 
+function ls(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
+function lss(k,v){ try { localStorage.setItem(k, v); } catch(e){} }
+function lsd(k){ try { localStorage.removeItem(k); } catch(e){} }
+function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
 // ---------- сервисные запросы ----------
 function timeout(ms){
   var ctl = new AbortController();
@@ -89,7 +101,7 @@ function timeout(ms){
 }
 
 function fetchJSON(url, opt, ms){
-  var tm = timeout(ms || 9000);
+  var tm = timeout(ms || 8000);
   return fetch(url, Object.assign({ cache:'no-store', signal: tm.signal }, opt || {}))
     .then(function(r){ tm.done(); return r.text().then(function(txt){
       var j = {};
@@ -99,27 +111,105 @@ function fetchJSON(url, opt, ms){
     .catch(function(){ tm.done(); return { status:0, ok:false, json:{} }; });
 }
 
-// адрес берём из двух источников и берём самый свежий по полю updated:
-// raw.githubusercontent может до 5 минут отдавать старое (он не учитывает ?v=),
-// а Pages после коммита обновляется за минуту — иногда быстрее рава.
-function getStatus(){
+function b64ToText(b64){
+  var bin = atob(b64.replace(/\s/g,''));
+  var n = bin.length, bytes = new Uint8Array(n), i;
+  for (i = 0; i < n; i++) bytes[i] = bin.charCodeAt(i);
+  if (window.TextDecoder) return new TextDecoder('utf-8').decode(bytes);
+  var s = '';
+  for (i = 0; i < n; i++) s += String.fromCharCode(bytes[i]);
+  return decodeURIComponent(escape(s));
+}
+
+// api.github.com отдаёт файл в base64, Pages и raw — как есть
+function statusFrom(r){
+  if (!r || !r.ok) return null;
+  var j = r.json || {};
+  if (typeof j.content === 'string' && typeof j.url !== 'string') {
+    try { j = JSON.parse(b64ToText(j.content)); } catch(e) { return null; }
+  }
+  return (typeof j.url === 'string') ? j : null;
+}
+
+// все известные адреса, самый свежий — первым
+function statusList(){
   var bust = '?v=' + Date.now();
-  var a = fetchJSON(LOCAL + bust, null, 6000);
-  var b = fetchJSON(RAW + bust, null, 9000);
-  return Promise.all([a, b]).then(function(res){
-    var best = null, bestT = -1;
-    for (var i = 0; i < res.length; i++) {
-      var r = res[i];
-      if (!r.ok || !r.json || typeof r.json.url !== 'string') continue;
-      var t = Date.parse(r.json.updated || '') || 0;
-      if (t >= bestT) { bestT = t; best = r.json; }
+  var reqs = [
+    { src:'api',   p: fetchJSON(API, { headers:{ 'Accept':'application/vnd.github+json' } }, 7000) },
+    { src:'pages', p: fetchJSON(LOCAL + bust, null, 5000) },
+    { src:'raw',   p: fetchJSON(RAW + bust, null, 7000) }
+  ];
+  return Promise.all(reqs.map(function(x){ return x.p; })).then(function(res){
+    var out = [], i;
+    for (i = 0; i < res.length; i++) {
+      var j = statusFrom(res[i]);
+      if (!j || !j.url) continue;
+      out.push({ url: j.url.replace(/\/+$/, ''), updated: Date.parse(j.updated || '') || 0 });
     }
-    return best;
+    out.sort(function(a, b){ return b.updated - a.updated; });
+    var mem = ls(URLKEY);
+    if (mem && !out.some(function(x){ return x.url === mem; })) out.push({ url: mem, updated: -1 });
+    return out;
   });
 }
 
 function ping(url){
-  return fetchJSON(url + '/__door/hi', null, 8000).then(function(r){ return r.ok; });
+  if (!url) return Promise.resolve(false);
+  return fetchJSON(url + '/__door/hi', null, 6000).then(function(r){
+    return !!(r.ok && r.json && r.json.ok === true);
+  });
+}
+
+// первый адрес, который согласился ответить
+function firstLive(urls){
+  return new Promise(function(resolve){
+    if (!urls.length) { resolve(''); return; }
+    var left = urls.length, done = false;
+    urls.forEach(function(u){
+      ping(u).then(function(alive){
+        left--;
+        if (alive && !done) { done = true; resolve(u); }
+        else if (left === 0 && !done) { done = true; resolve(''); }
+      });
+    });
+  });
+}
+
+// ищем живой адрес: сразу пробуем запомненный, параллельно — свежий из status.json
+function findLive(){
+  var mem = ls(URLKEY);
+  var quick = mem ? [mem] : [];
+  var slow = statusList().then(function(list){
+    return list.map(function(x){ return x.url; });
+  });
+  return new Promise(function(resolve){
+    var done = false, pending = 2;
+    function hit(u){
+      if (done) return;
+      if (u) { done = true; state.url = u; state.online = true; resolve(u); return; }
+      if (--pending === 0) { done = true; state.online = false; resolve(''); }
+    }
+    firstLive(quick).then(hit);
+    slow.then(firstLive).then(hit);
+  });
+}
+
+// «нет сервера» — это не приговор: дверь делает несколько попыток сама
+function withServer(attempt, fn, onFail){
+  return findLive().then(function(url){
+    if (!url) {
+      if (attempt < 3) {
+        setState('', 'сервер пока не отвечает — пробую ещё раз…');
+        return wait(2000).then(function(){ return withServer(attempt + 1, fn, onFail); });
+      }
+      setState('off', 'сервер не отвечает');
+      if (onFail) onFail();
+      return null;
+    }
+    lss(URLKEY, url);
+    setState('on', 'сервер на связи');
+    return fn(url);
+  });
 }
 
 function doorAuth(url, payload){
@@ -127,9 +217,10 @@ function doorAuth(url, payload){
     method:'POST',
     headers:{ 'Content-Type':'application/json' },
     body: JSON.stringify(payload)
-  }, 15000).then(function(r){
+  }, 20000).then(function(r){
     var j = r.json || {};
-    return { ok: !!(r.ok && j.ok), error: j.error || '', key: j.key || '', ticket: j.ticket || '', user: j.user || '' };
+    return { code:r.status, ok: !!(r.ok && j.ok), error: j.error || '',
+             key: j.key || '', ticket: j.ticket || '', user: j.user || '' };
   });
 }
 
@@ -140,45 +231,37 @@ function enter(url, ticket){
 // ---------- проверка сервера и «тихий» вход по ключу ----------
 function looksLikeKey(s){ return typeof s === 'string' && s.length >= 40; }
 
+function showForm(){
+  $('f').style.display = 'block';
+  setTimeout(function(){ try { $('u').focus(); } catch(e){} }, 60);
+}
+
 function boot(){
-  var saved = null;
-  try { saved = localStorage.getItem(KEY); } catch(e) {}
-  if (saved && !looksLikeKey(saved)) { try { localStorage.removeItem(KEY); } catch(e){} saved = null; }
+  var saved = ls(KEY);
+  if (saved && !looksLikeKey(saved)) { lsd(KEY); saved = ''; }
 
   if (saved) {
     $('forget').style.display = 'inline';
     $('f').style.display = 'none';
     setState('', 'вхожу по сохранённому ключу…');
-    getStatus().then(function(st){
-      if (!st || !st.url) { showForm(); err('адрес сервера не опубликован — включите окно «2. Сервер»'); return; }
-      return ping(st.url).then(function(live){
-        if (!live) { showForm(); setState('off','сервер не отвечает'); err('ПК сейчас выключен или туннель перезапускается'); return; }
-        return doorAuth(st.url, { key: saved }).then(function(res){
-          if (res.ok && res.ticket) { enter(st.url, res.ticket); return; }
-          try { localStorage.removeItem(KEY); } catch(e) {}
-          $('forget').style.display = 'none';
-          showForm();
-          setState('on', 'сервер на связи');
-          if (res.error) err('сохранённый вход больше не действует — введите пароль');
-        });
+    withServer(0, function(url){
+      return doorAuth(url, { key: saved }).then(function(res){
+        if (res.ok && res.ticket) { enter(url, res.ticket); return; }
+        lsd(KEY);
+        $('forget').style.display = 'none';
+        showForm();
+        if (res.code === 401) err('сохранённый вход больше не действует — введите пароль');
       });
+    }, function(){
+      showForm();
+      err('ПК сейчас выключен или туннель перезапускается — обновите страницу через полминуты');
     });
     return;
   }
 
-  getStatus().then(function(st){
-    state.url = st && st.url ? st.url : '';
-    if (!state.url) { setState('off','адрес сервера не опубликован'); return; }
-    return ping(state.url).then(function(live){
-      state.online = live;
-      setState(live ? 'on' : 'off', live ? 'сервер на связи · можно входить' : 'сервер не отвечает');
-    });
+  withServer(0, function(){ return null; }, function(){
+    err('ПК сейчас выключен или туннель перезапускается — обновите страницу через полминуты');
   });
-}
-
-function showForm(){
-  $('f').style.display = 'block';
-  setTimeout(function(){ try { $('u').focus(); } catch(e){} }, 60);
 }
 
 // ---------- отправка формы ----------
@@ -187,7 +270,7 @@ $('f').addEventListener('submit', function(e){
   var login = $('u').value.trim();
   var pass = $('p').value;
   var remember = !!$('rm').checked;
-  err('');
+  err(''); ok('');
 
   if (!login) { err('введите имя'); $('u').focus(); return; }
   if (!pass) { err('введите пароль'); $('p').focus(); return; }
@@ -200,40 +283,35 @@ $('f').addEventListener('submit', function(e){
   function stop(msg){
     b.disabled = false; b.textContent = was;
     if (msg) err(msg);
+    $('p').value = '';
+    $('p').focus();
   }
 
-  // адрес могли сменить — берём самый свежий
-  getStatus().then(function(st){
-    if (!st || !st.url) { stop('адрес сервера не опубликован — включите окно «2. Сервер»'); return; }
-    return ping(st.url).then(function(live){
-      if (!live) { setState('off','сервер не отвечает'); stop('сервер не отвечает — проверьте, что он включён'); return; }
-      return doorAuth(st.url, { login: login, pass: pass, remember: remember }).then(function(res){
-        if (!res.ok || !res.ticket) {
-          setState('on','сервер на связи');
-          stop(res.error || 'не удалось войти');
-          $('p').value = '';
-          $('p').focus();
-          return;
-        }
-        if (res.key) { try { localStorage.setItem(KEY, res.key); } catch(e) {} }
-        ok('вхожу как ' + (res.user || login) + '…');
-        enter(st.url, res.ticket);
-      });
+  withServer(0, function(url){
+    return doorAuth(url, { login: login, pass: pass, remember: remember }).then(function(res){
+      if (!res.ok) {
+        if (res.code === 401) stop(res.error || 'неверное имя или пароль');
+        else if (res.code === 403) stop('этот адрес сервера не разрешён — напишите владельцу');
+        else stop('связь оборвалась на полпути — нажмите «Войти» ещё раз');
+        return;
+      }
+      if (res.key) lss(KEY, res.key);
+      ok('вхожу как ' + (res.user || login) + '…');
+      enter(url, res.ticket);
     });
+  }, function(){
+    stop('сервер не отвечает — включите окно «2. Сервер» на ПК');
   });
 });
 
 $('forget').addEventListener('click', function(e){
   e.preventDefault();
-  try { localStorage.removeItem(KEY); } catch(e) {}
+  lsd(KEY);
   $('forget').style.display = 'none';
   $('okmsg').textContent = '';
   showForm();
   err('это устройство больше не помнит вход');
-  getStatus().then(function(st){
-    if (!st || !st.url) return;
-    return ping(st.url).then(function(live){ setState(live ? 'on':'off', live ? 'сервер на связи' : 'сервер не отвечает'); });
-  });
+  withServer(0, function(){ return null; }, null);
 });
 
 boot();
