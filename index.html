@@ -237,6 +237,7 @@ function showForm(){
 }
 
 function boot(){
+  if(/[?&]r=tunnel/.test(location.search)) err('связь пропала, сервер сменил адрес — входим заново');
   var saved = ls(KEY);
   if (saved && !looksLikeKey(saved)) { lsd(KEY); saved = ''; }
 
