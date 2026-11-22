@@ -121,11 +121,12 @@ function b64ToText(b64){
   return decodeURIComponent(escape(s));
 }
 
-// api.github.com отдаёт файл в base64, Pages и raw — как есть
+// api.github.com отдаёт файл в base64 (и своё поле url — его не спутать с адресом
+// сервера), Pages и raw — как есть
 function statusFrom(r){
   if (!r || !r.ok) return null;
   var j = r.json || {};
-  if (typeof j.content === 'string' && typeof j.url !== 'string') {
+  if (typeof j.content === 'string' && j.encoding === 'base64') {
     try { j = JSON.parse(b64ToText(j.content)); } catch(e) { return null; }
   }
   return (typeof j.url === 'string') ? j : null;
@@ -160,6 +161,16 @@ function ping(url){
   });
 }
 
+// подсказка из чата (?u=...): сама страница чата уже прочла status.json и знает адрес
+function hintUrl(){
+  var m=/[?&]u=([^&]+)/.exec(location.search);
+  if(!m)return '';
+  var u='';
+  try{ u=decodeURIComponent(m[1]); }catch(e){ return ''; }
+  u=u.replace(/\/+$/,'');
+  return /^https:\/\//.test(u) ? u : '';
+}
+
 // первый адрес, который согласился ответить
 function firstLive(urls){
   return new Promise(function(resolve){
@@ -175,12 +186,17 @@ function firstLive(urls){
   });
 }
 
-// ищем живой адрес: сразу пробуем запомненный, параллельно — свежий из status.json
+// ищем живой адрес: сначала — подсказка из чата, затем запомненный,
+// параллельно — свежий из status.json
 function findLive(){
-  var mem = ls(URLKEY);
-  var quick = mem ? [mem] : [];
+  var mem = ls(URLKEY), hint = hintUrl();
+  var quick = [];
+  if (hint) quick.push(hint);
+  if (mem && mem !== hint) quick.push(mem);
   var slow = statusList().then(function(list){
-    return list.map(function(x){ return x.url; });
+    var urls = list.map(function(x){ return x.url; });
+    if (hint && urls.indexOf(hint) < 0) urls.unshift(hint);
+    return urls;
   });
   return new Promise(function(resolve){
     var done = false, pending = 2;
@@ -260,8 +276,11 @@ function boot(){
     return;
   }
 
+  var lost=/[?&]r=tunnel/.test(location.search);
+  if(lost) err('связь пропала, а вход на этом устройстве не сохранён — введите имя и пароль');
   withServer(0, function(){ return null; }, function(){
-    err('ПК сейчас выключен или туннель перезапускается — обновите страницу через полминуты');
+    if(lost) err('сервер не отвечает — включите ПК (окно «2. Сервер») и обновите страницу');
+    else err('ПК сейчас выключен или туннель перезапускается — обновите страницу через полминуты');
   });
 }
 
