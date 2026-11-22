@@ -244,6 +244,24 @@ function enter(url, ticket){
   location.replace(url + '/?t=' + encodeURIComponent(ticket));
 }
 
+// ---------- вход по личной ссылке: /AI-bot-chat/<ключ> ----------
+// GitHub Pages на неизвестный путь отдаёт 404.html (его кладёт publish_door.ps1 — это
+// копия страницы), поэтому страница загружается как обычно. Ключ забираем из пути
+// и сразу стираем из адреса: по истории браузера и в переслатых ссылках его быть не должно.
+var BASE = '/AI-bot-chat/';
+function takeKeyFromPath(){
+  var p = location.pathname || '';
+  if (p.indexOf(BASE) === 0) p = p.slice(BASE.length);
+  else p = p.replace(/^\/+/, '');
+  p = p.replace(/\/+$/, '');
+  if (!p) return '';
+  var seg = p.split('/').pop();
+  if (!/^[0-9a-f]{40,120}$/i.test(seg)) return '';
+  lss(KEY, seg);
+  try { history.replaceState(null, '', BASE + (location.search || '')); } catch(e) {}
+  return seg;
+}
+
 // ---------- проверка сервера и «тихий» вход по ключу ----------
 function looksLikeKey(s){ return typeof s === 'string' && s.length >= 40; }
 
@@ -253,6 +271,7 @@ function showForm(){
 }
 
 function boot(){
+  takeKeyFromPath();                     // ключ из личной ссылки важнее всего остального
   if(/[?&]r=tunnel/.test(location.search)) err('связь пропала, сервер сменил адрес — входим заново');
   var saved = ls(KEY);
   if (saved && !looksLikeKey(saved)) { lsd(KEY); saved = ''; }
