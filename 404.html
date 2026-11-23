@@ -22,8 +22,12 @@ p{max-width:380px}
 <script>
 (function () {
   // Постоянный адрес страницы чата. Пока чат отдаёт сам сервер через туннель,
-  // эта страница просто уводит на вход, сохраняя подсказки (?r=tunnel, ?u=адрес).
-  var to = '/accounts/' + (location.search || '');
+  // эта страница уводит на вход, сохраняя подсказки (?r=tunnel, ?u=адрес).
+  // Старые личные ссылки /AI-Human-Messenger/<ключ> перекидываем на /accounts/<ключ>,
+  // чтобы ключ устройства не терялся.
+  var seg = (location.pathname || '').split('/').filter(Boolean).pop() || '';
+  var key = /^[0-9a-f]{40,120}$/i.test(seg) ? seg : '';
+  var to = '/accounts/' + key + (location.search || '');
   try { document.getElementById('lnk').href = to; } catch (e) {}
   location.replace(to);
 })();
