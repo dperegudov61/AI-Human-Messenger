@@ -71,7 +71,7 @@ button:disabled{opacity:.55;cursor:default}
 // все сразу и берётся самый свежий: API GitHub отдаёт файл без задержки кэша,
 // Pages/raw — с задержкой в десятки секунд, память устройства — на случай, если
 // ничего не ответило.
-var REPO   = 'dperegudov61/AI-bot-chat';
+var REPO   = 'dperegudov61/AI-Human-Messenger';
 var API    = 'https://api.github.com/repos/' + REPO + '/contents/status.json';
 var RAW    = 'https://raw.githubusercontent.com/' + REPO + '/main/status.json';
 var LOCAL  = 'status.json';
@@ -244,11 +244,11 @@ function enter(url, ticket){
   location.replace(url + '/?t=' + encodeURIComponent(ticket));
 }
 
-// ---------- вход по личной ссылке: /AI-bot-chat/<ключ> ----------
+// ---------- вход по личной ссылке: /AI-Human-Messenger/<ключ> ----------
 // GitHub Pages на неизвестный путь отдаёт 404.html (его кладёт publish_door.ps1 — это
 // копия страницы), поэтому страница загружается как обычно. Ключ забираем из пути
 // и сразу стираем из адреса: по истории браузера и в переслатых ссылках его быть не должно.
-var BASE = '/AI-bot-chat/';
+var BASE = '/AI-Human-Messenger/';
 function takeKeyFromPath(){
   var p = location.pathname || '';
   if (p.indexOf(BASE) === 0) p = p.slice(BASE.length);
