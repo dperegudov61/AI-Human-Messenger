@@ -2,34 +2,715 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <title>AI and Human Messenger</title>
 <style>
-body{margin:0;min-height:100vh;background:#101317;color:#e3e7ec;
-  font:15px/1.6 -apple-system,'Segoe UI',Roboto,system-ui,sans-serif;
-  display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font:15px/1.45 -apple-system,'Segoe UI',Roboto,system-ui,sans-serif;background:#111417;color:#e6e9ee;display:flex;height:var(--appH,100%)}
+button,input,textarea{font:inherit}
 a{color:#6aa9e6}
-p{max-width:380px}
+#side{width:260px;flex:0 0 260px;background:#161a1f;border-right:1px solid #262c34;display:flex;flex-direction:column;min-height:0}
+#side.hide{display:none}
+.brand{padding:12px 14px 8px;font-weight:600;letter-spacing:.2px}
+.brand small{display:block;font-weight:400;color:#7c8794;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase}
+#net{display:flex;align-items:center;gap:7px;padding:2px 14px 10px;color:#8b949e;font-size:12px}
+#net .dot{width:8px;height:8px;border-radius:50%;background:#4a5260;flex:0 0 auto}
+#net .dot.on{background:#4dbf74}
+.grp{padding:8px 14px 4px;color:#6d7885;font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between;align-items:center}
+.grp button{background:none;border:0;color:#7f8b99;cursor:pointer;font-size:14px;padding:0 2px}
+#people,#dialogs{overflow-y:auto;flex:0 1 auto;padding:0 8px 8px;min-height:0}
+#dialogs{flex:1 1 auto}
+.it{display:flex;gap:8px;align-items:center;padding:8px 8px;border-radius:9px;cursor:pointer;color:#dfe3e8}
+.it:hover{background:#1e232a}
+.it.on{background:#223040;outline:1px solid #33506e}
+.it .ic{width:20px;text-align:center;flex:0 0 20px;color:#8ea3b8}
+.it .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .sub{color:#7c8794;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .dot{width:7px;height:7px;border-radius:50%;background:#4a5260;flex:0 0 auto}
+.it .dot.on{background:#4dbf74}
+#me{margin-top:auto;border-top:1px solid #262c34;padding:10px 12px;display:flex;gap:8px;align-items:center;color:#9aa4b0;font-size:13px}
+#me .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#me button{background:#1d232b;border:1px solid #303842;color:#9aa4b0;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:12px}
+main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #262c34;background:#14181c}
+#menu{display:none;background:none;border:0;color:#c9d1d9;font-size:20px;cursor:pointer;padding:0 4px}
+#title{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hint{color:#7c8794;font-size:12px}
+#log{flex:1;overflow-y:auto;padding:14px 12px 8px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.m{max-width:min(640px,86%);padding:8px 11px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.m.u{align-self:flex-end;background:#2b5f96;color:#f2f7ff;border-bottom-right-radius:4px}
+.m.a{align-self:flex-start;background:#1c2229;color:#e6e9ee;border-bottom-left-radius:4px}
+.m.th{align-self:flex-start;background:#1a2129;color:#9fb3c8;font-size:13.5px}
+.m.e{align-self:flex-start;background:#3a2020;color:#ffb4b4;font-size:13.5px}
+.m .who{font-size:11.5px;color:#8fb8e0;margin-bottom:3px}
+.m .tm{font-size:10.5px;color:#789;margin-left:6px}
+.m img{max-width:100%;border-radius:8px;display:block;margin-top:6px;cursor:zoom-in;background:#0d1013;min-height:40px}
+.m .mimg{position:relative}
+.m .shr{position:absolute;right:6px;top:6px;background:rgba(12,16,20,.72);color:#cfe3ff;border:0;border-radius:8px;padding:3px 7px;font-size:12px;cursor:pointer}
+#typing{display:none;padding:2px 14px 6px;color:#8b949e;font-size:12.5px}
+#typing.on{display:block}
+#form{display:flex;gap:8px;align-items:flex-end;padding:8px 10px 10px;border-top:1px solid #262c34;background:#14181c}
+#clip{flex:0 0 auto;width:38px;height:38px;border-radius:10px;background:#1d232b;border:1px solid #303842;color:#9aa4b0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:19px}
+#text{flex:1;min-height:38px;max-height:40vh;resize:none;background:#1b2027;color:#e6e9ee;border:1px solid #2c333d;border-radius:11px;padding:9px 11px;outline:none}
+#send{flex:0 0 auto;width:42px;height:38px;border-radius:10px;border:0;background:#2f6fb5;color:#fff;font-size:17px;cursor:pointer}
+#send:disabled{opacity:.45}
+#send.busy{background:#5a4a22}
+#login{position:fixed;inset:0;background:#0e1114ee;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;z-index:20}
+#login.on{display:flex}
+#login .box{max-width:420px}
+#login h1{font-size:19px;margin:0 0 8px}
+#login p{color:#9aa4b0;margin:0 0 16px;font-size:14px}
+#login a.btn{display:inline-block;background:#2f6fb5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:600}
+#login .retry{display:block;margin-top:14px;background:none;border:0;color:#7c8794;cursor:pointer;font-size:13px;text-decoration:underline}
+@media (max-width:720px){
+  #side{position:fixed;inset:0 auto 0 0;z-index:15;box-shadow:0 0 0 100vmax #0009}
+  #side.hide{display:none}
+  #menu{display:block}
+  #hint{display:none}
+}
 </style>
 </head>
 <body>
-<div>
-  <p>Открываю вход в AI and Human Messenger…</p>
-  <p><a id="lnk" href="/accounts/">Перейти ко входу вручную</a></p>
-</div>
+<aside id="side">
+  <div class="brand">AI &amp; Human<small>мессенджер</small></div>
+  <div id="net"><span class="dot" id="ndot"></span><span id="ntext">ищу сервер…</span></div>
+  <div class="grp">Люди <span id="pcount"></span></div>
+  <div id="people"></div>
+  <div class="grp">Переписки <button id="newchat" type="button" title="новый чат с ИИ">＋</button></div>
+  <div id="dialogs"></div>
+  <div id="me"><span class="nm" id="mename">…</span><button id="acct" type="button">аккаунт</button></div>
+</aside>
+
+<main>
+  <header>
+    <button id="menu" type="button" aria-label="меню">☰</button>
+    <div id="title">выберите переписку</div>
+    <div id="hint"></div>
+  </header>
+  <div id="log"></div>
+  <div id="typing">ИИ думает…</div>
+  <form id="form" autocomplete="off">
+    <label id="clip" title="Прикрепить картинку">＋<input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden></label>
+    <textarea id="text" rows="1" placeholder="Сообщение…"></textarea>
+    <button id="send" type="submit" aria-label="отправить">➤</button>
+  </form>
+</main>
+
+<div id="login"><div class="box">
+  <h1 id="lht">Нужен вход</h1>
+  <p id="lmsg">Страница чата живёт на GitHub, а переписка — на вашем домашнем ПК.</p>
+  <a class="btn" id="lgo" href="/accounts/">Войти</a>
+  <button class="retry" id="lretry" type="button">Проверить связь ещё раз</button>
+</div></div>
+
 <script>
 (function () {
-  // Постоянный адрес страницы чата. Пока чат отдаёт сам сервер через туннель,
-  // эта страница уводит на вход, сохраняя подсказки (?r=tunnel, ?u=адрес).
-  // Старые личные ссылки /AI-Human-Messenger/<ключ> перекидываем на /accounts/<ключ>,
-  // чтобы ключ устройства не терялся.
-  var seg = (location.pathname || '').split('/').filter(Boolean).pop() || '';
-  var key = /^[0-9a-f]{40,120}$/i.test(seg) ? seg : '';
-  var to = '/accounts/' + key + (location.search || '');
-  try { document.getElementById('lnk').href = to; } catch (e) {}
-  location.replace(to);
+'use strict';
+
+// ---------- постоянные адреса ----------
+// Страница лежит в репозитории AI-Human-Messenger и открывается по постоянному адресу.
+// Адрес живого моста меняется при каждом перезапуске, поэтому он берётся из status.json
+// (репозиторий dperegudov61.github.io), а не зашит здесь.
+var REPO  = 'dperegudov61/dperegudov61.github.io';
+var API   = 'https://api.github.com/repos/' + REPO + '/contents/status.json';
+var RAW   = 'https://raw.githubusercontent.com/' + REPO + '/main/status.json';
+var LOCAL = 'https://dperegudov61.github.io/status.json';
+var GH    = 'https://dperegudov61.github.io';
+var PAGEURL = location.origin + location.pathname;
+var TOK   = 'door.token';
+var TOKSV = 'door.token.server';
+var URLKEY = 'door.url';
+var STALE_MIN = 60;
+
+var $ = function (id) { return document.getElementById(id); };
+var base = '', tok = '', me = '', admin = false;
+var dialogs = [], people = [], cur = null, curData = null, busy = false, pollT = 0, lastCount = -1;
+
+function ls(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function lsd(k) { try { localStorage.removeItem(k); } catch (e) {} }
+function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+  return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+
+// ---------- сеть ----------
+function timeout(ms) {
+  var ctl = new AbortController();
+  var t = setTimeout(function () { ctl.abort(); }, ms);
+  return { signal: ctl.signal, done: function () { clearTimeout(t); } };
+}
+
+function fetchJSON(url, opt, ms) {
+  var tm = timeout(ms || 8000);
+  return fetch(url, Object.assign({ cache: 'no-store', signal: tm.signal }, opt || {}))
+    .then(function (r) {
+      tm.done();
+      return r.text().then(function (txt) {
+        var j = {};
+        try { j = JSON.parse(txt || '{}'); } catch (e) {}
+        return { status: r.status, ok: r.ok, json: j };
+      });
+    })
+    .catch(function () { tm.done(); return { status: 0, ok: false, json: {} }; });
+}
+
+// запрос к серверу: всегда абсолютный адрес моста + токен в заголовке
+function api(path, opt) {
+  opt = opt || {};
+  var h = Object.assign({ 'Authorization': 'Bearer ' + tok }, opt.headers || {});
+  return fetchJSON(base + path, {
+    method: opt.method || 'GET',
+    headers: h,
+    body: opt.body
+  }, opt.ms || 20000);
+}
+
+function post(path, obj, ms) {
+  return api(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(obj || {}),
+    ms: ms || 20000
+  });
+}
+
+// ---------- status.json: где сейчас живёт сервер ----------
+function b64ToText(b64) {
+  var bin = atob(String(b64).replace(/\s/g, ''));
+  var n = bin.length, bytes = new Uint8Array(n), i;
+  for (i = 0; i < n; i++) bytes[i] = bin.charCodeAt(i);
+  if (window.TextDecoder) return new TextDecoder('utf-8').decode(bytes);
+  var s = '';
+  for (i = 0; i < n; i++) s += String.fromCharCode(bytes[i]);
+  return decodeURIComponent(escape(s));
+}
+
+function statusFrom(r) {
+  if (!r || !r.ok) return null;
+  var j = r.json || {};
+  if (typeof j.content === 'string' && j.encoding === 'base64') {
+    try { j = JSON.parse(b64ToText(j.content)); } catch (e) { return null; }
+  }
+  return (j && (typeof j.url === 'string' || j.connections)) ? j : null;
+}
+
+function connsOf(j) {
+  var out = [], arr = j && j.connections, i;
+  if (Object.prototype.toString.call(arr) === '[object Array]') {
+    for (i = 0; i < arr.length; i++) {
+      var c = arr[i] || {};
+      if (typeof c.url !== 'string' || !c.url) continue;
+      out.push({ url: c.url.replace(/\/+$/, ''), updated: Date.parse(c.created || '') || 0 });
+    }
+  }
+  if (!out.length && j && typeof j.url === 'string' && j.url) {
+    out.push({ url: j.url.replace(/\/+$/, ''), updated: Date.parse(j.updated || '') || 0 });
+  }
+  return out;
+}
+
+function statusList() {
+  var bust = '?v=' + Date.now();
+  var reqs = [
+    fetchJSON(API, { headers: { 'Accept': 'application/vnd.github+json' } }, 7000),
+    fetchJSON(LOCAL + bust, null, 5000),
+    fetchJSON(RAW + bust, null, 7000)
+  ];
+  return Promise.all(reqs).then(function (res) {
+    var seen = {}, out = [], i, k;
+    for (i = 0; i < res.length; i++) {
+      var list = connsOf(statusFrom(res[i]));
+      for (k = 0; k < list.length; k++) {
+        var u = list[k].url;
+        if (seen[u]) { if (list[k].updated > seen[u].updated) seen[u].updated = list[k].updated; continue; }
+        seen[u] = list[k];
+      }
+    }
+    for (var key in seen) if (Object.prototype.hasOwnProperty.call(seen, key)) out.push(seen[key]);
+    var mem = ls(URLKEY);
+    if (mem && !seen[mem]) out.push({ url: mem, updated: -1 });
+    out.sort(function (a, b) { return b.updated - a.updated; });
+    var now = Date.now();
+    var fresh = out.filter(function (x) { return x.updated <= 0 || (now - x.updated) / 60000 <= STALE_MIN; });
+    var stale = out.filter(function (x) { return x.updated > 0 && (now - x.updated) / 60000 > STALE_MIN; });
+    return fresh.concat(stale);   // старые мосты — в хвост: они скорее всего упали
+  });
+}
+
+function ping(url) {
+  if (!url) return Promise.resolve(false);
+  return fetchJSON(url + '/__door/hi', null, 6000).then(function (r) {
+    return !!(r.ok && r.json && r.json.ok === true);
+  });
+}
+
+// первый адрес, который ответил; проверяем пачкой, чтобы не ждать по очереди
+function firstLive(urls) {
+  return new Promise(function (resolve) {
+    if (!urls.length) { resolve(''); return; }
+    var left = urls.length, done = false;
+    urls.forEach(function (u) {
+      ping(u).then(function (alive) {
+        left--;
+        if (alive && !done) { done = true; resolve(u); }
+        else if (left === 0 && !done) { done = true; resolve(''); }
+      });
+    });
+  });
+}
+
+function findLive() {
+  var mem = ls(URLKEY);
+  var quick = mem ? [mem] : [];
+  var slow = statusList().then(function (list) { return list.map(function (x) { return x.url; }); });
+  return new Promise(function (resolve) {
+    var done = false, pending = 2;
+    function hit(u) {
+      if (done) return;
+      if (u) { done = true; resolve(u); return; }
+      if (--pending === 0) { done = true; resolve(''); }
+    }
+    firstLive(quick).then(hit);
+    slow.then(firstLive).then(hit);
+  });
+}
+
+// ---------- состояние связи ----------
+function net(on, text) {
+  $('ndot').className = 'dot' + (on ? ' on' : '');
+  $('ntext').textContent = text;
+}
+
+function showLogin(title, msg) {
+  $('lht').textContent = title || 'Нужен вход';
+  $('lmsg').textContent = msg || 'Страница чата живёт на GitHub, а переписка — на вашем домашнем ПК.';
+  $('lgo').href = '/accounts/?next=' + encodeURIComponent(PAGEURL);
+  $('login').className = 'on';
+}
+function hideLogin() { $('login').className = ''; }
+
+// ---------- вход ----------
+// Токен выдаёт страница входа (/accounts/). Он лежит в localStorage — страницы на
+// одном сайте dperegudov61.github.io видят его все. В запросах он идёт заголовком
+// Authorization, а в ссылках на картинки — параметром ?tk= (у <img> нет заголовков).
+function takeTokenFromUrl() {
+  var m = /[?&]tk=([^&]+)/.exec(location.search);
+  if (!m) return '';
+  var t = '';
+  try { t = decodeURIComponent(m[1]); } catch (e) { return ''; }
+  if (t) { lss(TOK, t); try { history.replaceState(null, '', location.pathname); } catch (e) {} }
+  return t;
+}
+
+function boot() {
+  net(false, 'ищу сервер…');
+  var url = '';
+  findLive().then(function (u) {
+    url = u;
+    if (!url) {
+      net(false, 'сервер не отвечает');
+      showLogin('Сервер не на связи', 'Включите ПК (окно «2. Сервер») — страница сама найдёт новый адрес моста.');
+      return;
+    }
+    base = url;
+    lss(URLKEY, url);
+    net(true, 'сервер на связи');
+    tok = takeTokenFromUrl() || ls(TOK);
+    return verify().then(function (ok) {
+      if (ok) { hideLogin(); return start(); }
+      // токена нет — возможно, на этом устройстве сохранён быстрый ключ входа
+      var key = ls('door.key');
+      if (!key) { showLogin(); return; }
+      return post('/__door/auth', { key: key }).then(function (r) {
+        var j = r.json || {};
+        if (r.ok && j.ok && j.token) {
+          tok = j.token; lss(TOK, tok); lss(TOKSV, base);
+          hideLogin(); return start();
+        }
+        lsd('door.key');
+        showLogin('Вход больше не действует', 'Ключ этого устройства не принят — войдите заново.');
+      });
+    });
+  });
+}
+
+function verify() {
+  if (!tok) return Promise.resolve(false);
+  return api('/__me', { ms: 8000 }).then(function (r) {
+    var j = r.json || {};
+    if (r.ok && (j.user || j.ok)) {
+      me = j.user || j.real || '';
+      admin = !!j.admin;
+      lss('door.user', me);
+      return true;
+    }
+    if (r.status === 401 || r.status === 403) { lsd(TOK); tok = ''; }
+    return false;
+  });
+}
+
+// ---------- запуск ----------
+function start() {
+  $('mename').textContent = me || 'вошёл';
+  renderManage();
+  refreshDialogs();
+  loadPeople();
+  clearInterval(pollT);
+  pollT = setInterval(tick, 6000);
+  // «на связи» отмечает /__ping — от него зависит зелёная точка у людей
+  setInterval(function () { if (base && tok) api('/__ping', { ms: 6000 }); }, 20000);
+}
+
+function refreshDialogs() {
+  return api('/__boot', { ms: 20000 }).then(function (r) {
+    var j = r.json || {};
+    if (j.user) { me = j.user; lss('door.user', me); }
+    admin = !!j.admin;
+    dialogs = j.dialogs || [];
+    if (!cur) {
+      var want = pickStart();
+      if (want) open(want);
+    }
+    renderDialogs();
+  });
+}
+
+// стартовая переписка: последняя, а если её нет — общий чат
+function pickStart() {
+  var shared = null, best = null;
+  dialogs.forEach(function (d) {
+    if (d.shared) shared = d;
+    else if (!best) best = d;
+  });
+  return best || shared;
+}
+
+function iconOf(d) {
+  if (d.shared) return '👥';
+  if (d.kind === 'pm') return '✉';
+  return d.model ? '💬' : '·';
+}
+
+function subOf(d) {
+  var bits = [];
+  if (d.shared) bits.push('общий чат');
+  else if (d.kind === 'pm') bits.push('личная переписка');
+  else bits.push('ИИ');
+  if (d.count) bits.push(d.count + ' сообщ.');
+  return bits.join(' · ');
+}
+
+function renderDialogs() {
+  var box = $('dialogs');
+  box.innerHTML = '';
+  dialogs.forEach(function (d) {
+    var el = document.createElement('div');
+    el.className = 'it' + (cur && cur.id === d.id ? ' on' : '');
+    el.innerHTML = '<span class="ic">' + iconOf(d) + '</span><span class="tt">' + esc(d.title) +
+      '<div class="sub">' + esc(subOf(d)) + '</div></span>';
+    el.onclick = function () { open(d); };
+    box.appendChild(el);
+  });
+  if (!dialogs.length) {
+    var e = document.createElement('div');
+    e.className = 'it';
+    e.innerHTML = '<span class="tt" style="color:#7c8794">пока нет переписок</span>';
+    box.appendChild(e);
+  }
+}
+
+function loadPeople() {
+  return api('/__people', { ms: 12000 }).then(function (r) {
+    people = (r.json || {}).people || [];
+    renderPeople();
+  });
+}
+
+function renderPeople() {
+  var box = $('people');
+  box.innerHTML = '';
+  people.forEach(function (p) {
+    var el = document.createElement('div');
+    el.className = 'it';
+    el.innerHTML = '<span class="dot' + (p.online ? ' on' : '') + '"></span>' +
+                   '<span class="tt">' + esc(p.name) + '</span>';
+    el.onclick = function () { openPm(p.name); };
+    box.appendChild(el);
+  });
+  if (!people.length) {
+    var e = document.createElement('div');
+    e.className = 'it';
+    e.innerHTML = '<span class="tt" style="color:#7c8794">пока никого нет</span>';
+    box.appendChild(e);
+  }
+  $('pcount').textContent = people.length ? '(' + people.length + ')' : '';
+}
+
+function openPm(name) {
+  post('/__pm/open', { user: name }, 12000).then(function (r) {
+    var j = r.json || {};
+    if (r.ok && j.ok) {
+      var d = { id: j.id, title: j.title || name, kind: 'pm', peer: j.peer || name };
+      open(d);
+      if (!dialogs.some(function (x) { return x.id === d.id; })) dialogs.unshift(d);
+      renderDialogs();
+      $('side').className = 'hide';
+    }
+  });
+}
+
+// ---------- переписка ----------
+function open(d) {
+  cur = d; lastCount = -1;
+  $('title').textContent = d.title || d.id;
+  $('hint').textContent = d.kind === 'pm' ? 'личная переписка' : d.shared ? 'общий чат' : (d.model || '');
+  $('side').className = window.innerWidth <= 720 ? 'hide' : '';
+  renderDialogs();
+  $('log').innerHTML = '';
+  loadDialog();
+  setTimeout(function () { $('text').focus(); }, 80);
+}
+
+function loadDialog() {
+  return api('/__dialog?id=' + encodeURIComponent(cur.id), { ms: 20000 }).then(function (r) {
+    var j = r.json || {};
+    if (!j.id) return;
+    curData = j;
+    if (j.title && j.title !== cur.title) { cur.title = j.title; $('title').textContent = j.title; }
+    lastCount = (j.messages || []).length;
+    drawMessages(j.messages || []);
+  });
+}
+
+function imageSrc(link, small) {
+  if (!link) return '';
+  return base + link + '?v=' + (small ? 'small' : 'full') + '&tk=' + encodeURIComponent(tok);
+}
+
+function drawMessages(msgs) {
+  var log = $('log');
+  log.innerHTML = '';
+  var mine = (me || '').toLowerCase();
+  msgs.forEach(function (m) {
+    var el = document.createElement('div');
+    var own = m.role === 'user' && (!m.author || m.author.toLowerCase() === mine);
+    el.className = 'm ' + (m.role === 'assistant' ? (m.content.indexOf('⏹') === 0 ? 'th' : 'a') : (own ? 'u' : 'a'));
+    if (m.author) {
+      var w = document.createElement('div');
+      w.className = 'who';
+      w.textContent = m.author;
+      el.appendChild(w);
+    }
+    if (m.content) {
+      var t = document.createElement('div');
+      t.textContent = m.content;
+      el.appendChild(t);
+    }
+    if (m.image && m.link) {
+      var wrap = document.createElement('div');
+      wrap.className = 'mimg';
+      var im = document.createElement('img');
+      im.loading = 'lazy';
+      im.alt = 'картинка';
+      im.src = imageSrc(m.link, true);
+      im.onclick = function () { window.open(imageSrc(m.link, false), '_blank'); };
+      im.onerror = function () { this.onerror = null; this.src = imageSrc(m.link, false); };
+      wrap.appendChild(im);
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'shr';
+      b.title = 'поделиться картинкой';
+      b.textContent = '🔗';
+      b.onclick = function () { shareImage(m.link); };
+      wrap.appendChild(b);
+      el.appendChild(wrap);
+    }
+    log.appendChild(el);
+  });
+  log.scrollTop = log.scrollHeight;
+}
+
+// ---------- отправка ----------
+function isAi() { return !!(curData && curData.model && !curData.shared && curData.kind !== 'pm'); }
+
+function setBusy(on, text) {
+  busy = on;
+  $('send').className = on ? 'busy' : '';
+  $('typing').className = on ? 'on' : '';
+  if (text) $('typing').textContent = text;
+}
+
+function send() {
+  var textEl = $('text');
+  var q = textEl.value.trim();
+  if (!q || !cur || busy) return;
+  textEl.value = '';
+  if (isAi()) return sendAi(q);
+  setBusy(true, 'отправляю…');
+  post('/__msg', { id: cur.id, text: q }, 20000).then(function (r) {
+    setBusy(false);
+    if (!r.ok) {
+      alert((r.json || {}).error || ('не отправилось (HTTP ' + r.status + ')'));
+      textEl.value = q;
+      return;
+    }
+    loadDialog();
+  });
+}
+
+function sendAi(q) {
+  setBusy(true, 'ИИ думает…');
+  var d = curData || {};
+  var msgs = [];
+  if (d.systemPrompt) msgs.push({ role: 'system', content: d.systemPrompt });
+  (d.messages || []).forEach(function (m) { if (m.content) msgs.push({ role: m.role, content: m.content }); });
+  msgs.push({ role: 'user', content: q });
+  // сообщение появляется сразу, не дожидаясь ответа
+  drawMessages((d.messages || []).concat([{ role: 'user', content: q }]));
+  fetchJSON(base + '/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + tok,
+      'Content-Type': 'application/json',
+      'X-Chat-Id': cur.id
+    },
+    body: JSON.stringify({
+      messages: msgs,
+      stream: false,
+      max_tokens: d.maxTokens || 512,
+      temperature: d.temperature || 0.7
+    })
+  }, 300000).then(function (r) {
+    var j = r.json || {};
+    var acc = '';
+    try { acc = j.choices[0].message.content || ''; } catch (e) {}
+    if (r.status === 503) throw new Error('модель сейчас загружается — попробуйте через полминуты');
+    if (!r.ok || !acc) throw new Error((j.error && (j.error.message || j.error)) || ('ответа нет (HTTP ' + r.status + ')'));
+    var hist = (d.messages || []).concat([
+      { role: 'user', content: q },
+      { role: 'assistant', content: acc }
+    ]);
+    return post('/__log', { id: cur.id, user: q, assistant: acc, messages: hist }, 30000).then(function () {
+      loadDialog();
+    });
+  }).catch(function (e) {
+    net(false, 'связь оборвалась');
+    setBusy(false);
+    $('text').value = q;
+    alert('Не получилось: ' + (e && e.message ? e.message : e));
+    setTimeout(function () { net(true, 'сервер на связи'); loadDialog(); }, 2500);
+  }).then(function () { setBusy(false); });
+}
+
+// ---------- картинки ----------
+// Доступ выдаётся ключом: сама картинка лежит на сервере, а ключ решает, кто её увидит.
+// Ключ-ссылка показывается один раз (на сервере хранится только хеш).
+function shareImage(link) {
+  var id = String(link || '').split('/').pop();
+  if (!id) return;
+  var who = prompt('Кому дать доступ к картинке?\n\n• оставьте пусто — выпустить ключ-ссылку\n• или впишите имя человека', '');
+  if (who === null) return;
+  who = who.trim();
+  var body = who ? { id: id, to: who } : { id: id };
+  post('/__img/share', body, 15000).then(function (r) {
+    var j = r.json || {};
+    if (!r.ok || !j.ok) { alert(j.error || 'не получилось'); return; }
+    if (j.key) {
+      var full = base + j.path;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(full).then(function () {
+          alert('Ключ-ссылка скопирована:\n' + full);
+        }, function () { prompt('Скопируйте ссылку:', full); });
+      } else prompt('Скопируйте ссылку:', full);
+    } else {
+      alert('Доступ выдан: ' + (j.to || who));
+    }
+  });
+}
+
+function upload(file) {
+  if (!file || !cur) return;
+  if (file.size > 24 * 1024 * 1024) { alert('Файл больше 24 МБ'); return; }
+  setBusy(true, 'загружаю картинку…');
+  var q = '/__img/upload?name=' + encodeURIComponent(file.name) + '&id=' + encodeURIComponent(cur.id);
+  fetchJSON(base + q, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': file.type || 'application/octet-stream' },
+    body: file
+  }, 120000).then(function (r) {
+    setBusy(false);
+    if (!r.ok) { alert((r.json || {}).error || 'не загрузилось'); return; }
+    loadDialog();
+  });
+}
+
+// ---------- опрос: чужие сообщения ----------
+var tickN = 0;
+function tick() {
+  if (!base || !tok || busy) return;
+  tickN++;
+  if (curData && (curData.shared || curData.kind === 'pm')) {
+    api('/__dialog?id=' + encodeURIComponent(cur.id), { ms: 12000 }).then(function (r) {
+      var j = r.json || {};
+      if (!j.id || busy) return;
+      var n = (j.messages || []).length;
+      if (n !== lastCount) { curData = j; lastCount = n; drawMessages(j.messages || []); refreshDialogs(); }
+    });
+    // людей обновляем реже: каждый запрос через туннель стоит времени
+    if (tickN % 3 === 0) loadPeople();
+  }
+}
+
+// ---------- мелочи ----------
+function renderManage() {
+  $('acct').onclick = function () { location.href = GH + '/accounts/'; };
+}
+
+$('menu').onclick = function () { $('side').classList.toggle('hide'); };
+$('form').onsubmit = function (e) { e.preventDefault(); send(); };
+$('text').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+$('text').addEventListener('input', function () {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, window.innerHeight * 0.4) + 'px';
+});
+$('file').onchange = function () {
+  var f = this.files && this.files[0];
+  this.value = '';
+  if (f) upload(f);
+};
+$('lretry').onclick = function () { hideLogin(); boot(); };
+
+// новый чат с ИИ: модель выберет сервер (по умолчанию — самая лёгкая)
+$('newchat').onclick = function () {
+  if (busy) return;
+  setBusy(true, 'создаю чат…');
+  post('/__dialogs', {}, 20000).then(function (r) {
+    setBusy(false);
+    var j = r.json || {};
+    if (!r.ok || !j.id) { alert(j.error || 'не получилось создать чат'); return; }
+    var d = { id: j.id, title: j.title, model: j.model, count: 0 };
+    dialogs.unshift(d);
+    renderDialogs();
+    open(d);
+  });
+};
+
+// телефон: клавиатура не должна перекрывать ленту и поле ввода
+var vv = window.visualViewport;
+function fitViewport() {
+  if (!vv) return;
+  document.documentElement.style.setProperty('--appH', Math.round(vv.height) + 'px');
+  var log = $('log');
+  if (log.scrollHeight - log.scrollTop - log.clientHeight < 160) log.scrollTop = log.scrollHeight;
+}
+if (vv) { vv.addEventListener('resize', fitViewport); vv.addEventListener('scroll', fitViewport); }
+
+boot();
 })();
 </script>
 </body>
