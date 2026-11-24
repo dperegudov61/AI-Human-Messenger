@@ -356,8 +356,20 @@ function takeTokenFromUrl() {
   return t;
 }
 
+// личная ссылка вида /AI-Human-Messenger/<ключ> (её отдаёт 404.html — копия страницы):
+// ключ из пути становится быстрым ключом устройства и стирается из адреса
+function takeKeyFromPath() {
+  var p = location.pathname || '';
+  var m = /^\/AI-Human-Messenger\/([A-Za-z0-9_-]{16,64})\/?$/.exec(p);
+  if (!m) return '';
+  lss('door.key', m[1]);
+  try { history.replaceState(null, '', '/AI-Human-Messenger/'); } catch (e) {}
+  return m[1];
+}
+
 function boot() {
   net(false, 'ищу сервер…');
+  takeKeyFromPath();
   var local = /^(127\.0\.0\.1|localhost)$/i.test(location.hostname);
   var ready = local ? Promise.resolve(location.origin) : findLive();
   ready.then(function (url) {
