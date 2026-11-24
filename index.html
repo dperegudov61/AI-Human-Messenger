@@ -514,6 +514,7 @@ function applySync(chatId, j) {
 function mergeFile(chatId, f) {
   return cGet('files', f.id).then(function (old) {
     var rec = old || { id: f.id, loaded: 0, chunks: 0, state: 'none', at: nowMs() };
+    var oldSize = rec.size || 0;
     rec.chat = rec.chat || chatId;
     rec.name = f.name || rec.name || '';
     rec.mime = f.mime || rec.mime || '';
@@ -530,6 +531,14 @@ function mergeFile(chatId, f) {
       return cDropChunks(f.id).then(function () { return cPut('files', rec); });
     }
     if (rec.state === 'denied') { rec.state = 'none'; rec.loaded = 0; rec.chunks = 0; }
+    // просмотр пересобрали — старые куски больше не подходят
+    if (rec.state === 'done' && f.vsize > 0 && oldSize > 0 && oldSize !== f.vsize) {
+      if (fileUrls[f.id]) { try { URL.revokeObjectURL(fileUrls[f.id]); } catch (e) {} delete fileUrls[f.id]; }
+      return cDropChunks(f.id).then(function () {
+        rec.state = 'none'; rec.loaded = 0; rec.chunks = 0;
+        return cPut('files', rec);
+      });
+    }
     return cPut('files', rec);
   });
 }
@@ -614,9 +623,25 @@ function downloadFile(fid) {
       }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       var resumed = r.status === 206;
-      if (!resumed) from = 0;
+      var prep = Promise.resolve();
+      if (resumed) {
+        // смещение могло устареть, если просмотр пересобрали — сверяем общий размер
+        var cr = r.headers.get('Content-Range') || '';
+        var cm = /\/(\d+)\s*$/.exec(cr);
+        var tot = cm ? Number(cm[1]) : 0;
+        if (tot > 0 && rec.size > 0 && tot !== rec.size) {
+          return cDropChunks(fid).then(function () {
+            rec.chunks = 0; rec.loaded = 0; rec.size = tot; rec.state = 'none'; rec.mt = nowMs();
+            return cPut('files', rec);
+          }).then(function () { delete dlActive[myId]; return downloadFile(fid); });
+        }
+      } else if (from > 0) {
+        // сервер отдал всё целиком — старые куски больше не продолжение файла
+        from = 0;
+        prep = cDropChunks(fid).then(function () { rec.chunks = 0; rec.loaded = 0; });
+      }
       var headLen = Number(r.headers.get('Content-Length') || 0);
-      var total = rec.size > 0 ? rec.size : headLen + from;
+      var total = headLen > 0 ? headLen + from : (rec.size || 0);
       var reader = r.body.getReader();
       var parts = [], partLen = 0, got = from, lastPaint = 0;
 
@@ -645,7 +670,8 @@ function downloadFile(fid) {
         return reader.read().then(function (x) {
           if (x.done) {
             return flush().then(function () {
-              rec.loaded = got; rec.state = 'done'; rec.total = total; rec.perm = 1; rec.mt = nowMs();
+              rec.loaded = got; rec.state = 'done'; rec.total = total; rec.size = total;
+              rec.perm = 1; rec.mt = nowMs();
               return cPut('files', rec).then(function () { return assembleFile(rec); });
             }).then(function () { delete dlActive[myId]; });
           }
@@ -656,7 +682,7 @@ function downloadFile(fid) {
         });
       }
       paint(true);
-      return step();
+      return prep.then(step);
     }).catch(function () {
       // связь оборвалась: куски остаются, следующее открытие чата продолжит с loaded
       delete dlActive[myId];
@@ -666,7 +692,11 @@ function downloadFile(fid) {
 
 function assembleFile(rec) {
   return cByIndex('chunks', 'file', rec.id).then(function (chunks) {
-    if (!chunks || !chunks.length) return;
+    if (!chunks || !chunks.length) {
+      // куски потеряли (чужой perm, чистка) — при следующем показе скачаем заново
+      if (rec.state === 'done') { rec.state = 'none'; rec.mt = nowMs(); return cPut('files', rec); }
+      return;
+    }
     chunks.sort(function (a, b) { return a.i - b.i; });
     var parts = [];
     for (var i = 0; i < chunks.length; i++) parts.push(new Blob([chunks[i].data]));
@@ -1035,6 +1065,8 @@ function showMe() {
 function refreshDialogs() {
   return api('/__boot', { ms: 20000 }).then(function (r) {
     var j = r.json || {};
+    // без сети (status 0) или без списка чатов кэш не трогаем — иначе выбросим всё
+    if (!r.ok || !(j.dialogs instanceof Array)) return;
     if (j.user) { me = j.user; }
     realMe = j.real || realMe;
     actName = j.act || '';
@@ -1232,8 +1264,9 @@ function msgEl(m) {
       if (u) window.open(u, '_blank');
     };
     im.onerror = function () {
-      this.onerror = null;
-      if (m.link && this.src.indexOf('/f/') < 0) this.src = imageSrc(m.link, false);
+      if (this.dataset.retry) return;
+      this.dataset.retry = '1';
+      if (m.link) this.src = imageSrc(m.link, false);
     };
     wrap.appendChild(im);
     // оригинал — линейкой: изначальное название сохраняется в паспорте файла
