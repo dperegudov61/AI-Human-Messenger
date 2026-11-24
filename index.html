@@ -78,6 +78,9 @@ header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1
 .m .shr{position:absolute;right:6px;top:6px;background:rgba(12,16,20,.72);color:#cfe3ff;border:0;border-radius:8px;padding:3px 7px;font-size:12px;cursor:pointer}
 .m .dl{position:absolute;right:6px;bottom:6px;background:rgba(12,16,20,.72);color:#cfe3ff;border-radius:8px;padding:3px 8px;font-size:13px;text-decoration:none}
 .m .dl:hover,.m .shr:hover{background:rgba(40,80,140,.9)}
+.m.gone{align-self:center;background:transparent;color:#6f7a86;font-size:12.5px;font-style:italic;padding:2px 8px}
+.m .fwait{font-size:11.5px;color:#8b949e;margin-top:4px}
+.m .fwait:empty{display:none}
 #typing{display:none;padding:2px 14px 6px;color:#8b949e;font-size:12.5px}
 #typing.on{display:block}
 #form{display:flex;gap:8px;align-items:flex-end;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #262c34;background:#14181c}
@@ -244,6 +247,569 @@ function api(path, opt) {
 function post(path, obj, ms) {
   return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(obj || {}), ms: ms || 20000 });
+}
+
+// ---------- кэш в браузере (IndexedDB) ----------
+// У каждого объекта свой id: чат, сообщение, файл. Клиент хранит их локально,
+// при входе сразу показывает, а потом сверяет списки id с сервером через
+// POST /__sync и /__chats/sync. Чего нет на сервере — выбрасываем; на месте
+// удалённого сообщения остаётся пометка «сообщение удалено».
+// У записи две даты: mt — когда менялась, at — когда её смотрели (для чистки).
+var CACHE_DB = 'msgcache', CACHE_KEEP_DAYS = 30, CACHE_FILE_DAYS = 60;
+var LAST_CHAT = 'chat.last', PRUNE_KEY = 'cache.prune';
+var dbP = null, db = null, dbOk = false;
+var fileUrls = {}, dlQueue = [], dlActive = {}, DL_MAX = 2;
+var localPos = 0;
+
+function nowMs() { return Date.now(); }
+
+function cacheOpen() {
+  if (dbP) return dbP;
+  dbP = new Promise(function (resolve) {
+    if (!window.indexedDB) { resolve(null); return; }
+    var r = indexedDB.open(CACHE_DB, 1);
+    r.onupgradeneeded = function (ev) {
+      var d = ev.target.result;
+      if (!d.objectStoreNames.contains('chats')) d.createObjectStore('chats', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('msgs')) {
+        var s = d.createObjectStore('msgs', { keyPath: 'k' });
+        s.createIndex('chat', 'chat', { unique: false });
+        s.createIndex('image', 'image', { unique: false });
+      }
+      if (!d.objectStoreNames.contains('files')) d.createObjectStore('files', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('chunks')) {
+        var c = d.createObjectStore('chunks', { keyPath: 'k' });
+        c.createIndex('file', 'file', { unique: false });
+      }
+      if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv', { keyPath: 'k' });
+    };
+    r.onsuccess = function () { db = r.result; dbOk = !!db; resolve(db); };
+    r.onerror = function () { dbOk = false; resolve(null); };
+  });
+  return dbP;
+}
+function cReq(req) {
+  return new Promise(function (res, rej) {
+    req.onsuccess = function () { res(req.result); };
+    req.onerror = function () { rej(req.error); };
+  });
+}
+function cDone(tx) {
+  return new Promise(function (res, rej) {
+    tx.oncomplete = function () { res(true); };
+    tx.onerror = function () { rej(tx.error); };
+    tx.onabort = function () { try { rej(tx.error); } catch (e) { rej(null); } };
+  });
+}
+function cPut(store, val) {
+  return cacheOpen().then(function (d) {
+    if (!d) return 0;
+    var tx = d.transaction(store, 'readwrite');
+    tx.objectStore(store).put(val);
+    return cDone(tx);
+  }).catch(function () { return 0; });
+}
+function cGet(store, key) {
+  return cacheOpen().then(function (d) {
+    if (!d) return null;
+    return cReq(d.transaction(store, 'readonly').objectStore(store).get(key));
+  }).catch(function () { return null; });
+}
+function cDel(store, key) {
+  return cacheOpen().then(function (d) {
+    if (!d) return 0;
+    var tx = d.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    return cDone(tx);
+  }).catch(function () { return 0; });
+}
+function cAll(store) {
+  return cacheOpen().then(function (d) {
+    if (!d) return [];
+    return cReq(d.transaction(store, 'readonly').objectStore(store).getAll());
+  }).catch(function () { return []; });
+}
+function cByIndex(store, index, val) {
+  return cacheOpen().then(function (d) {
+    if (!d) return [];
+    return cReq(d.transaction(store, 'readonly').objectStore(store).index(index).getAll(val));
+  }).catch(function () { return []; });
+}
+
+// ---------- записи ----------
+function msgKey(chatId, mid) { return chatId + '|' + mid; }
+function msgRec(chatId, m, pos) {
+  var t = nowMs();
+  return {
+    k: msgKey(chatId, m.id), chat: chatId, id: m.id, pos: (typeof pos === 'number' ? pos : 0),
+    role: m.role || 'user', content: m.content || '', author: m.author || '',
+    image: m.image || '', link: m.link || '', created: m.created || '',
+    del: m.deleted ? 1 : 0, perm: 1, state: 'sent', mt: t, at: t
+  };
+}
+function recMsg(r) {
+  return { id: r.id, role: r.role, content: r.content, author: r.author,
+    image: r.image, link: r.link, deleted: !!r.del, state: r.state || 'sent' };
+}
+function chatRec(d) {
+  var t = nowMs();
+  return { id: d.id, title: d.title || '', kind: d.kind || '', peer: d.peer || '',
+    model: d.model || '', shared: !!d.shared, count: d.count || 0,
+    updated: d.updated || '', mt: t, at: t };
+}
+function chatOut(c) {
+  return { id: c.id, title: c.title, kind: c.kind, peer: c.peer, model: c.model,
+    shared: !!c.shared, count: c.count || 0, updated: c.updated || '' };
+}
+
+// ---------- чтение кэша ----------
+function cacheMsgs(chatId) { return cByIndex('msgs', 'chat', chatId); }
+
+function cacheTouch(chatId) {
+  return cGet('chats', chatId).then(function (c) {
+    if (!c) return;
+    c.at = nowMs();
+    return cPut('chats', c);
+  });
+}
+
+// мгновенное открытие: что уже лежит в браузере — показываем до сети
+function cacheBoot() {
+  return cAll('chats').then(function (list) {
+    if (dialogs.length || !list.length) return;
+    list.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
+    dialogs = list.map(chatOut);
+    if (!cur) {
+      var want = null, last = ls(LAST_CHAT);
+      if (last) { for (var i = 0; i < dialogs.length; i++) if (dialogs[i].id === last) want = dialogs[i]; }
+      if (!want) want = pickStart();
+      if (want) open(want);
+    }
+    renderAll();
+  });
+}
+
+// открытый чат: сначала из кэша, затем сверка по id
+function cacheRenderChat(chatId, keepScroll) {
+  if (!dbOk) {
+    // нет IndexedDB (редкий случай): рисуем то, что пришло от сервера
+    if (cur && cur.id === chatId && curData && curData.messages) drawMessages(curData.messages, keepScroll);
+    return Promise.resolve();
+  }
+  return cacheMsgs(chatId).then(function (list) {
+    if (!cur || cur.id !== chatId) return;
+    list.sort(function (a, b) { return (a.pos || 0) - (b.pos || 0); });
+    var msgs = list.map(recMsg);
+    if (curData) curData.messages = msgs;
+    lastCount = list.length;
+    if (localPos < lastCount) localPos = lastCount;
+    drawMessages(msgs, keepScroll);
+    for (var i = 0; i < list.length; i++) {
+      var fid = list[i].image;
+      if (!fid || list[i].del) continue;
+      prepFile(fid);
+    }
+  });
+}
+
+function prepFile(fid) {
+  if (fileUrls[fid]) { updateImages(fid); return; }
+  cGet('files', fid).then(function (f) {
+    if (f && f.perm) ensureFile(f);
+  });
+}
+
+// ---------- сверка с сервером ----------
+var syncBusy = {}, syncAgain = {};
+function syncChat(chatId) {
+  if (!chatId || !base || !tok) return Promise.resolve();
+  if (syncBusy[chatId]) { syncAgain[chatId] = true; return Promise.resolve(); }
+  syncBusy[chatId] = true;
+  return cacheMsgs(chatId).then(function (local) {
+    var have = [], seen = {};
+    local.forEach(function (r) { if (r.id && !seen[r.id]) { seen[r.id] = 1; have.push(r.id); } });
+    var fids = [];
+    local.forEach(function (r) { if (r.image && fids.indexOf(r.image) < 0) fids.push(r.image); });
+    return Promise.all(fids.map(function (fid) { return cGet('files', fid); })).then(function (frecs) {
+      var files = frecs.filter(Boolean).map(function (f) { return { id: f.id, done: f.state === 'done' }; });
+      return post('/__sync', { id: chatId, have: have, files: files }, 25000);
+    });
+  }).then(function (r) {
+    syncBusy[chatId] = false;
+    var j = (r && r.json) || {};
+    if (!r || !r.ok || !j.id) {
+      if (r && (r.status === 403 || r.status === 404)) toast(j.error || 'нет доступа к переписке');
+      return;
+    }
+    return applySync(chatId, j);
+  }).then(function () {
+    if (syncAgain[chatId]) {
+      syncAgain[chatId] = false;
+      if (cur && cur.id === chatId) return syncChat(chatId);
+    }
+  }).catch(function () { syncBusy[chatId] = false; });
+}
+
+function applySync(chatId, j) {
+  var ids = j.ids || [], index = {};
+  ids.forEach(function (mid, i) { index[mid] = i; });
+  if (j.chat) {
+    if (cur && cur.id === chatId) curData = j.chat;
+    for (var i = 0; i < dialogs.length; i++) {
+      if (dialogs[i].id !== chatId) continue;
+      dialogs[i].title = j.chat.title || dialogs[i].title;
+      dialogs[i].count = j.count || 0;
+      dialogs[i].updated = j.chat.updated || dialogs[i].updated;
+      renderAll();
+      break;
+    }
+  }
+  if (!dbOk) {
+    // без кэша — просто список с сервера (have всегда пуст)
+    if (j.chat) {
+      j.chat.messages = (j.msgs || []).map(function (m) { return recMsg(msgRec(chatId, m, 0)); });
+      if (cur && cur.id === chatId) { curData = j.chat; drawMessages(j.chat.messages, true); }
+    }
+    return;
+  }
+  var dels = j.del || [];
+  return cacheMsgs(chatId).then(function (local) {
+    var byId = {}, ops = [];
+    local.forEach(function (r) { byId[r.id] = r; });
+    // 1) у клиента есть, у сервера нет — объекта больше не существует
+    local.forEach(function (r) {
+      if (index.hasOwnProperty(r.id)) return;
+      if (r.del) return;
+      // своё ещё не подтверждённое сообщение сервер мог просто не получить — не съедаем
+      if (r.state === 'sending' || r.state === 'error') return;
+      r.del = 1; r.perm = 0; r.content = ''; r.image = ''; r.link = ''; r.mt = nowMs();
+      ops.push(cPut('msgs', r));
+    });
+    // 2) сервер пометил сообщение удалённым
+    dels.forEach(function (mid) {
+      var r = byId[mid];
+      if (!r) {
+        r = { k: msgKey(chatId, mid), chat: chatId, id: mid, pos: index[mid] || 0,
+              role: 'user', content: '', author: '', image: '', link: '', created: '', state: 'sent' };
+      }
+      if (r.del && !r.content && !r.image) return;
+      r.del = 1; r.perm = 1; r.content = ''; r.image = ''; r.link = ''; r.mt = nowMs();
+      if (index.hasOwnProperty(mid)) r.pos = index[mid];
+      ops.push(cPut('msgs', r));
+    });
+    // 3) чего у клиента не было
+    (j.msgs || []).forEach(function (m) {
+      if (!m.id) return;
+      ops.push(cPut('msgs', msgRec(chatId, m, index.hasOwnProperty(m.id) ? index[m.id] : 0)));
+    });
+    // 4) права на файлы и их размеры
+    (j.files || []).forEach(function (f) { ops.push(mergeFile(chatId, f)); });
+    return Promise.all(ops);
+  }).then(function () {
+    if (!dbOk) return;      // без кэша ничего рисовать не надо — сообщения уже на экране
+    return cacheRenderChat(chatId, true);
+  });
+}
+
+function mergeFile(chatId, f) {
+  return cGet('files', f.id).then(function (old) {
+    var rec = old || { id: f.id, loaded: 0, chunks: 0, state: 'none', at: nowMs() };
+    rec.chat = rec.chat || chatId;
+    rec.name = f.name || rec.name || '';
+    rec.mime = f.mime || rec.mime || '';
+    rec.size = f.vsize || f.size || rec.size || 0;
+    rec.w = f.w || rec.w || 0;
+    rec.h = f.h || rec.h || 0;
+    rec.link = f.link || rec.link || ('/f/' + f.id);
+    rec.perm = f.perm ? 1 : 0;
+    rec.mt = nowMs();
+    if (!f.perm) {
+      rec.state = 'denied'; rec.loaded = 0; rec.chunks = 0;
+      if (fileUrls[f.id]) { try { URL.revokeObjectURL(fileUrls[f.id]); } catch (e) {} delete fileUrls[f.id]; }
+      showDenied(f.id);
+      return cDropChunks(f.id).then(function () { return cPut('files', rec); });
+    }
+    if (rec.state === 'denied') { rec.state = 'none'; rec.loaded = 0; rec.chunks = 0; }
+    return cPut('files', rec);
+  });
+}
+
+// список чатов: сервер прислал свой — чего нет, удаляем вместе с сообщениями
+function applyChats(list) {
+  list = list || [];
+  var keep = {};
+  list.forEach(function (d) { keep[d.id] = d; });
+  return cAll('chats').then(function (old) {
+    var has = {};
+    old.forEach(function (c) { has[c.id] = c; });
+    var drops = [];
+    old.forEach(function (c) { if (!keep[c.id]) drops.push(dropChatCache(c.id)); });
+    return Promise.all(drops).then(function () {
+      var ops = [];
+      list.forEach(function (d) {
+        var c = has[d.id];
+        if (!c) { ops.push(cPut('chats', chatRec(d))); return; }
+        if (c.title === (d.title || '') && c.count === (d.count || 0) && c.updated === (d.updated || '') &&
+            c.model === (d.model || '') && c.kind === (d.kind || '') && c.peer === (d.peer || '')) return;
+        c.title = d.title || ''; c.kind = d.kind || ''; c.peer = d.peer || '';
+        c.model = d.model || ''; c.shared = !!d.shared; c.count = d.count || 0;
+        c.updated = d.updated || ''; c.mt = nowMs();
+        ops.push(cPut('chats', c));
+      });
+      return Promise.all(ops);
+    });
+  });
+}
+
+function dropChatCache(chatId) {
+  return cacheMsgs(chatId).then(function (list) {
+    return Promise.all(list.map(function (m) { return cDel('msgs', m.k); }));
+  }).then(function () { return cDel('chats', chatId); });
+}
+
+// ---------- файлы: сборка из кусков и докачка ----------
+function ensureFile(rec) {
+  if (!rec || !rec.perm) return;
+  if (fileUrls[rec.id]) { updateImages(rec.id); return; }
+  if (dlActive[rec.id]) return;
+  if (rec.state === 'done') {
+    dlActive[rec.id] = true;
+    assembleFile(rec).then(function () { delete dlActive[rec.id]; });
+    return;
+  }
+  if (dlQueue.some(function (x) { return x.id === rec.id; })) return;
+  dlQueue.push(rec);
+  pumpDownloads();
+}
+function pumpDownloads() {
+  while (dlQueue.length && Object.keys(dlActive).length < DL_MAX) {
+    var rec = dlQueue.shift();
+    if (!rec || dlActive[rec.id] || fileUrls[rec.id]) continue;
+    dlActive[rec.id] = true;
+    downloadFile(rec.id).then(function () { pumpDownloads(); });
+  }
+}
+
+function fileUrl(rec) {
+  var t = nowMs();
+  if (rec.state === 'done') { rec.mt = t; }
+  rec.at = t;
+  return cPut('files', rec);
+}
+
+function downloadFile(fid) {
+  var myId = fid;
+  return cGet('files', fid).then(function (rec) {
+    if (!rec || !rec.perm) { delete dlActive[myId]; return; }
+    if (rec.state === 'done') { return assembleFile(rec).then(function () { delete dlActive[myId]; }); }
+    var from = rec.loaded || 0;
+    var url = base + (rec.link || ('/f/' + fid)) + '?v=small&tk=' + encodeURIComponent(tok);
+    var opt = {};   // браузерный HTTP-кеш не обходим: <img> уже мог скачать эти байты
+    if (from > 0) opt.headers = { 'Range': 'bytes=' + from + '-' };
+    return fetch(url, opt).then(function (r) {
+      if (r.status === 403 || r.status === 404) {
+        rec.state = 'denied'; rec.perm = 0; rec.mt = nowMs();
+        showDenied(fid);
+        return cDropChunks(fid).then(function () { return cPut('files', rec); }).then(function () { delete dlActive[myId]; });
+      }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var resumed = r.status === 206;
+      if (!resumed) from = 0;
+      var headLen = Number(r.headers.get('Content-Length') || 0);
+      var total = rec.size > 0 ? rec.size : headLen + from;
+      var reader = r.body.getReader();
+      var parts = [], partLen = 0, got = from, lastPaint = 0;
+
+      function flush() {
+        if (!parts.length) return Promise.resolve();
+        var all = new Uint8Array(partLen), at = 0;
+        parts.forEach(function (u) { all.set(u, at); at += u.length; });
+        parts = []; partLen = 0;
+        var idx = rec.chunks || 0;
+        rec.chunks = idx + 1;
+        rec.loaded = got;
+        rec.state = 'part';
+        rec.at = nowMs();
+        return Promise.all([
+          cPut('chunks', { k: fid + '|' + idx, file: fid, i: idx, data: all.buffer }),
+          cPut('files', rec)
+        ]);
+      }
+      function paint(force) {
+        var t = nowMs();
+        if (!force && t - lastPaint < 400) return;
+        lastPaint = t;
+        showProgress(fid, total > 0 ? Math.min(99, Math.round(100 * got / total)) : 0);
+      }
+      function step() {
+        return reader.read().then(function (x) {
+          if (x.done) {
+            return flush().then(function () {
+              rec.loaded = got; rec.state = 'done'; rec.total = total; rec.perm = 1; rec.mt = nowMs();
+              return cPut('files', rec).then(function () { return assembleFile(rec); });
+            }).then(function () { delete dlActive[myId]; });
+          }
+          parts.push(x.value); partLen += x.value.length; got += x.value.length;
+          paint();
+          if (partLen >= 262144) return flush().then(step);
+          return step();
+        });
+      }
+      paint(true);
+      return step();
+    }).catch(function () {
+      // связь оборвалась: куски остаются, следующее открытие чата продолжит с loaded
+      delete dlActive[myId];
+    });
+  });
+}
+
+function assembleFile(rec) {
+  return cByIndex('chunks', 'file', rec.id).then(function (chunks) {
+    if (!chunks || !chunks.length) return;
+    chunks.sort(function (a, b) { return a.i - b.i; });
+    var parts = [];
+    for (var i = 0; i < chunks.length; i++) parts.push(new Blob([chunks[i].data]));
+    var blob = new Blob(parts, { type: rec.mime || 'image/jpeg' });
+    if (fileUrls[rec.id]) { try { URL.revokeObjectURL(fileUrls[rec.id]); } catch (e) {} }
+    fileUrls[rec.id] = URL.createObjectURL(blob);
+    updateImages(rec.id);
+    var t = nowMs();
+    rec.at = t; rec.mt = t;
+    return cPut('files', rec);
+  });
+}
+
+function cDropChunks(fid) {
+  return cacheOpen().then(function (d) {
+    if (!d) return;
+    return cReq(d.transaction('chunks', 'readonly').objectStore('chunks').index('file').getAllKeys(fid))
+      .then(function (keys) {
+        if (!keys || !keys.length) return;
+        var tx = d.transaction('chunks', 'readwrite');
+        var st = tx.objectStore('chunks');
+        keys.forEach(function (k) { st.delete(k); });
+        return cDone(tx);
+      });
+  }).catch(function () {});
+}
+
+function updateImages(fid) {
+  var u = fileUrls[fid];
+  if (!u) return;
+  var imgs = document.querySelectorAll('img[data-fid="' + fid + '"]');
+  for (var i = 0; i < imgs.length; i++) { imgs[i].src = u; imgs[i].style.display = ''; }
+  var waits = document.querySelectorAll('[data-fwait="' + fid + '"]');
+  for (var j = 0; j < waits.length; j++) waits[j].textContent = '';
+}
+function showProgress(fid, pct) {
+  var waits = document.querySelectorAll('[data-fwait="' + fid + '"]');
+  for (var j = 0; j < waits.length; j++) waits[j].textContent = 'кэш ' + pct + '%';
+}
+function showDenied(fid) {
+  saveImagesOff(fid);
+  var waits = document.querySelectorAll('[data-fwait="' + fid + '"]');
+  for (var j = 0; j < waits.length; j++) waits[j].textContent = 'файл недоступен';
+}
+function saveImagesOff(fid) {
+  var imgs = document.querySelectorAll('img[data-fid="' + fid + '"]');
+  for (var i = 0; i < imgs.length; i++) { imgs[i].style.display = 'none'; }
+}
+
+// ---------- push: новое или удалённое сообщение ----------
+function onPushMsg(e) {
+  var chatId = e.c, m = e.m;
+  if (!dbOk) {
+    // без кэша сообщение держим только на экране
+    if (m && m.id && cur && cur.id === chatId) {
+      curData.messages = (curData.messages || []).concat([recMsg(msgRec(chatId, m, 0))]);
+      drawMessages(curData.messages, true);
+    }
+    updateChatCount(chatId, e.n);
+    return;
+  }
+  if (m && m.id) {
+    var pos = (typeof e.n === 'number' && e.n > 0) ? e.n - 1 : 0;
+    cPut('msgs', msgRec(chatId, m, pos)).then(function () {
+      if (cur && cur.id === chatId) cacheRenderChat(chatId, true);
+    });
+  } else if (e.mid) {
+    // сообщение длинное и в событие не влезло — догружаем одно по id
+    api('/__msg?id=' + encodeURIComponent(chatId) + '&mid=' + encodeURIComponent(e.mid), { ms: 15000 })
+      .then(function (r) {
+        var j = (r && r.json) || {};
+        if (!r.ok || !j.id) return;
+        var pos = (typeof e.n === 'number' && e.n > 0) ? e.n - 1 : 0;
+        return cPut('msgs', msgRec(chatId, j, pos)).then(function () {
+          if (cur && cur.id === chatId) cacheRenderChat(chatId, true);
+        });
+      });
+  }
+  updateChatCount(chatId, e.n);
+}
+
+function onPushDel(e) {
+  var ids = String(e.d || '').split(',');
+  if (!dbOk) {
+    if (cur && cur.id === e.c && curData && curData.messages) {
+      curData.messages.forEach(function (m) {
+        if (ids.indexOf(m.id) >= 0) { m.deleted = true; m.content = ''; m.image = ''; }
+      });
+      drawMessages(curData.messages, true);
+    }
+    updateChatCount(e.c, e.n);
+    return;
+  }
+  Promise.all(ids.map(function (mid) {
+    return cGet('msgs', msgKey(e.c, mid)).then(function (r) {
+      if (!r) return;
+      r.del = 1; r.content = ''; r.image = ''; r.link = ''; r.mt = nowMs();
+      return cPut('msgs', r);
+    });
+  })).then(function () {
+    if (cur && cur.id === e.c) cacheRenderChat(e.c, true);
+  });
+  updateChatCount(e.c, e.n);
+}
+
+function updateChatCount(chatId, n) {
+  if (typeof n !== 'number') return;
+  for (var i = 0; i < dialogs.length; i++) {
+    if (dialogs[i].id !== chatId) continue;
+    dialogs[i].count = n;
+    cGet('chats', chatId).then(function (c) {
+      if (!c) return;
+      c.count = n; c.mt = nowMs();
+      return cPut('chats', c);
+    });
+    renderAll();
+    break;
+  }
+}
+
+// ---------- чистка старых записей ----------
+function pruneCache() {
+  var last = Number(ls(PRUNE_KEY) || 0);
+  if (nowMs() - last < 6 * 3600 * 1000) return Promise.resolve();
+  lss(PRUNE_KEY, String(nowMs()));
+  var cutChats = nowMs() - CACHE_KEEP_DAYS * 86400 * 1000;
+  var cutFiles = nowMs() - CACHE_FILE_DAYS * 86400 * 1000;
+  return cAll('chats').then(function (chats) {
+    return Promise.all(chats.map(function (c) {
+      if ((c.at || 0) > cutChats) return null;
+      return cacheMsgs(c.id).then(function (list) {
+        return Promise.all(list.map(function (m) { return cDel('msgs', m.k); }));
+      });
+    }));
+  }).then(function () {
+    return cAll('files');
+  }).then(function (files) {
+    return Promise.all(files.map(function (f) {
+      if (f.perm && (f.at || 0) > cutFiles) return null;
+      if (fileUrls[f.id]) { try { URL.revokeObjectURL(fileUrls[f.id]); } catch (e) {} delete fileUrls[f.id]; }
+      return cDropChunks(f.id).then(function () { return cDel('files', f.id); });
+    }));
+  });
 }
 
 // ---------- status.json: где сейчас живёт сервер ----------
@@ -445,8 +1011,10 @@ function start() {
   showMe();
   renderManage();
   loadModels();
-  refreshDialogs();
   loadPeople();
+  cacheBoot();        // сначала то, что уже есть в браузере (мгновенное переключение)
+  refreshDialogs();   // потом сеть: /__boot + сверка списка чатов
+  pruneCache();       // чистка старых записей по датам mt/at
   channel();          // канал событий: вместо опроса диалога каждые 6 секунд
 }
 
@@ -472,12 +1040,26 @@ function refreshDialogs() {
     actName = j.act || '';
     admin = !!j.admin;
     showMe();
-    dialogs = j.dialogs || [];
-    if (!cur) {
-      var want = pickStart();
-      if (want) open(want);
-    }
-    renderAll();
+    var list = j.dialogs || [];
+    return applyChats(list).then(function () {
+      dialogs = list.map(chatOut);
+      if (!cur) {
+        var want = pickStart();
+        if (want) open(want);
+      } else {
+        // открытый чат мог исчезнуть (удалён или отобран доступ)
+        var d = null;
+        for (var i = 0; i < dialogs.length; i++) if (dialogs[i].id === cur.id) { d = dialogs[i]; break; }
+        if (!d) {
+          cur = null; curData = null; lastCount = -1;
+          $('log').innerHTML = ''; $('title').textContent = 'выберите переписку';
+        } else {
+          cur = d;
+          if (d.title) $('title').textContent = titleOf(d);
+        }
+      }
+      renderAll();
+    });
   });
 }
 
@@ -571,26 +1153,23 @@ function loadModels() {
 
 // ---------- переписка ----------
 function open(d) {
-  cur = d; lastCount = -1;
+  cur = d; curData = { id: d.id, model: d.model || '', kind: d.kind || '', shared: !!d.shared };
+  lastCount = -1; localPos = 0;
+  try { lss(LAST_CHAT, d.id); } catch (e) {}
   $('title').textContent = titleOf(d);
   $('hint').textContent = d.kind === 'pm' ? 'личная переписка' : d.shared ? 'общий чат' : (d.model || '');
   if (window.innerWidth <= 820) $('side').className = 'hide';
   renderAll();
   $('log').innerHTML = '';
-  loadDialog();
+  cacheRenderChat(d.id);     // мгновенно: всё, что успело загрузиться раньше
+  syncChat(d.id);            // сеть: список id туда-обратно
+  cacheTouch(d.id);
   setTimeout(function () { $('text').focus(); }, 80);
 }
 
+// любое обновление диалога в старом коде — это сверка по id
 function loadDialog() {
-  return api('/__dialog?id=' + encodeURIComponent(cur.id), { ms: 20000 }).then(function (r) {
-    var j = r.json || {};
-    if (!j.id) return;
-    curData = j;
-    if (j.title && j.title !== cur.title) { cur.title = j.title; $('title').textContent = j.title; }
-    $('cfg').disabled = !isAiDialog();
-    lastCount = (j.messages || []).length;
-    drawMessages(j.messages || []);
-  });
+  return syncChat(cur ? cur.id : '');
 }
 
 function imageSrc(link, small) {
@@ -608,64 +1187,93 @@ function fileDownload(link) {
 function msgEl(m) {
   var mine = (me || '').toLowerCase();
   var el = document.createElement('div');
-    var own = m.role === 'user' && (!m.author || m.author.toLowerCase() === mine);
-    el.className = 'm ' + (m.role === 'assistant' ? (m.content.indexOf('⏹') === 0 ? 'th' : 'a') : (own ? 'u' : 'a'));
-    if (m.author && !own) {
-      var w = document.createElement('div');
-      w.className = 'who';
-      w.textContent = m.author;
-      el.appendChild(w);
-    }
-    if (m.content) {
-      var t = document.createElement('div');
-      t.textContent = m.content;
-      el.appendChild(t);
-    }
-    if (m.image && m.link) {
-      var wrap = document.createElement('div');
-      wrap.className = 'mimg';
-      var im = document.createElement('img');
-      im.loading = 'lazy';
-      im.alt = 'картинка';
-      // progressive JPEG: браузер рисует его по мере прихода байтов
-      im.src = imageSrc(m.link, true);
-      im.onclick = function () { window.open(imageSrc(m.link, false), '_blank'); };
-      im.onerror = function () { this.onerror = null; this.src = imageSrc(m.link, false); };
-      wrap.appendChild(im);
-      // оригинал — линейкой: изначальное название сохраняется в паспорте файла
-      var dl = document.createElement('a');
-      dl.className = 'dl';
-      dl.title = 'скачать оригинал (как загружено)';
-      dl.textContent = '⬇';
-      dl.href = fileDownload(m.link);
-      dl.setAttribute('download', '');
-      wrap.appendChild(dl);
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'shr';
-      b.title = 'поделиться картинкой';
-      b.textContent = '🔗';
-      b.onclick = function () { shareImage(m.link); };
-      wrap.appendChild(b);
-      el.appendChild(wrap);
+  if (m.deleted) {
+    el.className = 'm gone';
+    el.textContent = 'сообщение удалено';
+    if (m.id) el.setAttribute('data-mid', m.id);
+    return el;
+  }
+  var own = m.role === 'user' && (!m.author || m.author.toLowerCase() === mine);
+  el.className = 'm ' + (m.role === 'assistant' ? (m.content.indexOf('⏹') === 0 ? 'th' : 'a') : (own ? 'u' : 'a'));
+  if (m.state === 'sending') el.className += ' pend';
+  if (m.state === 'error') {
+    el.className += ' err';
+    el.title = 'не отправлено — нажмите, чтобы повторить';
+    el.onclick = function () { retryMsg(m); };
+  }
+  if (m.id) el.setAttribute('data-mid', m.id);
+  if (own && m.id && m.state !== 'sending') {
+    // своё сообщение: долгое нажатие (правый клик) — удалить, останется пометка
+    el.oncontextmenu = function (ev) { ev.preventDefault(); askDelete(m); };
+  }
+  if (m.author && !own) {
+    var w = document.createElement('div');
+    w.className = 'who';
+    w.textContent = m.author;
+    el.appendChild(w);
+  }
+  if (m.content) {
+    var t = document.createElement('div');
+    t.textContent = m.content;
+    el.appendChild(t);
+  }
+  if (m.image) {
+    var wrap = document.createElement('div');
+    wrap.className = 'mimg';
+    var im = document.createElement('img');
+    im.loading = 'lazy';
+    im.alt = 'картинка';
+    im.setAttribute('data-fid', m.image);
+    if (fileUrls[m.image]) im.src = fileUrls[m.image];
+    else if (m.link) im.src = imageSrc(m.link, true);   // progressive: браузер рисует по мере прихода
+    else im.style.display = 'none';
+    im.onclick = function () {
+      var u = fileUrls[m.image] || (m.link ? imageSrc(m.link, false) : '');
+      if (u) window.open(u, '_blank');
+    };
+    im.onerror = function () {
+      this.onerror = null;
+      if (m.link && this.src.indexOf('/f/') < 0) this.src = imageSrc(m.link, false);
+    };
+    wrap.appendChild(im);
+    // оригинал — линейкой: изначальное название сохраняется в паспорте файла
+    var dl = document.createElement('a');
+    dl.className = 'dl';
+    dl.title = 'скачать оригинал (как загружено)';
+    dl.textContent = '⬇';
+    dl.href = fileDownload(m.link);
+    dl.setAttribute('download', '');
+    wrap.appendChild(dl);
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'shr';
+    b.title = 'поделиться картинкой';
+    b.textContent = '🔗';
+    b.onclick = function () { shareImage(m.link); };
+    wrap.appendChild(b);
+    var wait = document.createElement('div');
+    wait.className = 'fwait';
+    wait.setAttribute('data-fwait', m.image);
+    wait.textContent = fileUrls[m.image] ? '' : 'кэш…';
+    wrap.appendChild(wait);
+    el.appendChild(wrap);
+    prepFile(m.image);
   }
   return el;
 }
 
-function drawMessages(msgs) {
+function drawMessages(msgs, keep) {
   var log = $('log');
+  var near = (log.scrollHeight - log.scrollTop - log.clientHeight) < 120;
+  var top = log.scrollTop;
   log.innerHTML = '';
   msgs.forEach(function (m) { log.appendChild(msgEl(m)); });
-  log.scrollTop = log.scrollHeight;
+  if (!keep || near) log.scrollTop = log.scrollHeight;
+  else log.scrollTop = top;
+  $('cfg').disabled = !isAiDialog();
 }
 
 // добавить только новые сообщения — без перерисовки всего и без прыжка прокрутки
-function appendMessages(msgs) {
-  var log = $('log');
-  var near = (log.scrollHeight - log.scrollTop - log.clientHeight) < 120;
-  msgs.forEach(function (m) { log.appendChild(msgEl(m)); });
-  if (near) log.scrollTop = log.scrollHeight;
-}
 
 // ---------- отправка ----------
 function isAiDialog() { return !!(curData && curData.model && !curData.shared && curData.kind !== 'pm'); }
@@ -685,8 +1293,15 @@ function send() {
   if (isAiDialog()) return sendAi(q);
   setBusy(true, 'отправляю…');
   var cid = newCid();
-  var pending = pendingEl(q);
-  deliver(cur.id, q, cid, pending, 0);
+  var mid = newMid();
+  var pos = localPos;
+  localPos = pos + 1;
+  // id у сообщения есть ещё до отправки: и в кэше, и на сервере — один объект.
+  // Пока ответа нет — статус sending (полупрозрачное), ошибка — err (по нажатию повтор)
+  var rec = msgRec(cur.id, { id: mid, role: 'user', content: q, author: me }, pos);
+  rec.state = 'sending';
+  cPut('msgs', rec).then(function () { cacheRenderChat(cur.id); });
+  deliver(cur.id, q, cid, mid, 0);
 }
 
 // ключ сообщения: повтор после обрыва не задваивает запись (сервер помнит cid)
@@ -694,57 +1309,75 @@ function newCid() {
   return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 }
 
-// сообщение видно сразу, полупрозрачным, до подтверждения сервером
-function pendingEl(text) {
-  var log = $('log');
-  var el = document.createElement('div');
-  el.className = 'm u pend';
-  var t = document.createElement('div');
-  t.textContent = text;
-  el.appendChild(t);
-  log.appendChild(el);
-  log.scrollTop = log.scrollHeight;
-  return el;
+// id сообщения (16 hex) — такой же формат, как у сервера
+function newMid() {
+  var s = '';
+  for (var i = 0; i < 16; i++) s += Math.floor(Math.random() * 16).toString(16);
+  return s;
 }
 
-function deliver(id, text, cid, pending, tryN) {
-  post('/__msg', { id: id, text: text, cid: cid }, 20000).then(function (r) {
-    if (r.ok) {
+function markMsgState(chatId, mid, state) {
+  return cGet('msgs', msgKey(chatId, mid)).then(function (r) {
+    if (!r) return;
+    r.state = state; r.mt = nowMs();
+    return cPut('msgs', r).then(function () {
+      if (cur && cur.id === chatId) cacheRenderChat(chatId, true);
+    });
+  });
+}
+
+function retryMsg(m) {
+  if (!cur || !m || !m.id) return;
+  setBusy(true, 'отправляю…');
+  markMsgState(cur.id, m.id, 'sending');
+  deliver(cur.id, m.content, newCid(), m.id, 0);
+}
+
+// удаление: на сервере остаётся tombstone, у всех на его месте — «сообщение удалено»
+function askDelete(m) {
+  if (!cur || !m || !m.id) return;
+  if (!confirm('Удалить сообщение? На его месте останется «сообщение удалено».')) return;
+  post('/__msg/delete', { id: cur.id, mid: m.id }, 15000).then(function (r) {
+    var j = r.json || {};
+    if (!r.ok || j.ok === false) { toast(j.error || 'не удалилось'); return; }
+    onPushDel({ c: cur.id, d: m.id, n: (lastCount > 0 ? lastCount : 1) });
+  });
+}
+
+function deliver(id, text, cid, mid, tryN) {
+  post('/__msg', { id: id, text: text, cid: cid, mid: mid }, 20000).then(function (r) {
+    var j = r.json || {};
+    if (r.ok && j.ok !== false) {
       setBusy(false);
-      if (pending && pending.parentNode) pending.parentNode.removeChild(pending);
-      if (cur && cur.id === id) {
-        if (lastCount >= 0) loadDelta(); else loadDialog();
-      }
+      markMsgState(id, mid, 'sent');
       return;
     }
-    // ответ мог потеряться уже после записи на диск — повторяем с тем же cid
+    // ответ мог потеряться уже после записи на диск — повторяем с тем же cid и mid
     if ((r.status === 0 || r.status >= 500) && tryN < 2) {
-      setTimeout(function () { deliver(id, text, cid, pending, tryN + 1); }, 2500);
+      setTimeout(function () { deliver(id, text, cid, mid, tryN + 1); }, 2500);
       return;
     }
     setBusy(false);
-    if (pending) {
-      pending.className = 'm u err';
-      pending.title = 'не отправлено — нажмите, чтобы повторить';
-      pending.onclick = function () {
-        if (pending.parentNode) pending.parentNode.removeChild(pending);
-        var again = pendingEl(text);
-        setBusy(true, 'отправляю…');
-        deliver(id, text, cid, again, 0);
-      };
-    }
-    toast((r.json || {}).error || (r.status ? 'не отправилось (HTTP ' + r.status + ')' : 'нет связи — нажмите на сообщение, чтобы повторить'));
+    markMsgState(id, mid, 'error');
+    toast(j.error || (r.status ? 'не отправилось (HTTP ' + r.status + ')' :
+      'нет связи — нажмите на сообщение, чтобы повторить'));
   });
 }
 
 function sendAi(q) {
   setBusy(true, 'ИИ думает…');
   var d = curData || {};
-  var msgs = [];
+  var msgs = [], allHist = [];
   if (d.systemPrompt) msgs.push({ role: 'system', content: d.systemPrompt });
-  (d.messages || []).forEach(function (m) { if (m.content) msgs.push({ role: m.role, content: m.content }); });
+  (d.messages || []).forEach(function (m) {
+    // удалённые оставляем местом (id), но модели их не отдаём
+    if (m.deleted) { allHist.push({ id: m.id, role: m.role || 'user', content: '', deleted: true }); return; }
+    if (!m.content) return;
+    allHist.push({ id: m.id, role: m.role, content: m.content, author: m.author || '' });
+    msgs.push({ role: m.role, content: m.content });
+  });
   msgs.push({ role: 'user', content: q });
-  drawMessages((d.messages || []).concat([{ role: 'user', content: q }]));
+  drawMessages(allHist.concat([{ role: 'user', content: q }]));
   fetchJSON(base + '/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json', 'X-Chat-Id': cur.id },
@@ -755,7 +1388,7 @@ function sendAi(q) {
     try { acc = j.choices[0].message.content || ''; } catch (e) {}
     if (r.status === 503) throw new Error('модель сейчас загружается — попробуйте через полминуты');
     if (!r.ok || !acc) throw new Error((j.error && (j.error.message || j.error)) || ('ответа нет (HTTP ' + r.status + ')'));
-    var hist = (d.messages || []).concat([{ role: 'user', content: q }, { role: 'assistant', content: acc }]);
+    var hist = allHist.concat([{ role: 'user', content: q }, { role: 'assistant', content: acc }]);
     return post('/__log', { id: cur.id, user: q, assistant: acc, messages: hist }, 30000).then(function () { loadDialog(); });
   }).catch(function (e) {
     net(false, 'связь оборвалась');
@@ -852,7 +1485,7 @@ function sendFile(file, sha) {
 // Событие — уведомление: {s: номер, k: вид, c: диалог, a: кто, n: сколько сообщений}.
 // Сами сообщения забираем дельтой /__dialog?after=N — сотни байт вместо всего диалога.
 var chSeq = 0, chDown = 0, chBusy = false, chTimer = 0, chWait = 25, chOn = false;
-var listT = 0, peopleT = 0, deltaBusy = false, deltaAgain = false;
+var listT = 0, peopleT = 0;
 
 function channel() {
   if (chOn) return;   // один канал на страницу
@@ -921,11 +1554,14 @@ function resync() {
 
 function onEvent(e) {
   var k = (e && e.k) || '';
-  if (k === 'msg' || k === 'img') {
-    if (cur && e.c === cur.id) {
-      if (typeof e.n === 'number' && lastCount >= 0 && e.n > lastCount) loadDelta();
-      else if (!busy) loadDialog();
-    }
+  if (k === 'msg') {
+    onPushMsg(e);          // сообщение уже в событии — без отдельного запроса
+    listDirty();
+  } else if (k === 'del') {
+    onPushDel(e);          // удаление: на месте сообщения — «сообщение удалено»
+    listDirty();
+  } else if (k === 'img') {
+    if (cur && e.c === cur.id) syncChat(cur.id);
     listDirty();
   } else if (k === 'chat' || k === 'acc') {
     listDirty();
@@ -940,43 +1576,23 @@ function listDirty() {
   listT = setTimeout(refreshList, 250);
 }
 
-// только список чатов (дешевле, чем /__boot с моделями и статусом)
+// список чатов: свой список id туда, серверный — обратно; чего нет — выбрасываем
 function refreshList() {
-  return api('/__dialogs', { ms: 15000 }).then(function (r) {
+  return post('/__chats/sync', {}, 15000).then(function (r) {
     var j = r.json || {};
-    if (!j.dialogs) return;
-    dialogs = j.dialogs;
-    if (cur) {
-      var d = null;
-      for (var i = 0; i < dialogs.length; i++) if (dialogs[i].id === cur.id) { d = dialogs[i]; break; }
-      if (!d) {
-        cur = null; curData = null; lastCount = -1;
-        $('log').innerHTML = ''; $('title').textContent = 'выберите переписку';
-      } else cur = d;
-    }
-    renderAll();
-  });
-}
-
-// доехать только новыми сообщениями: ?after=<сколько уже есть>
-function loadDelta() {
-  if (!cur) return Promise.resolve();
-  if (deltaBusy) { deltaAgain = true; return Promise.resolve(); }
-  deltaBusy = true;
-  var id = cur.id;
-  var from = Math.max(0, lastCount);
-  return api('/__dialog?id=' + encodeURIComponent(id) + '&after=' + from, { ms: 15000 }).then(function (r) {
-    deltaBusy = false;
-    var j = r.json || {};
-    if (!j.id || !cur || cur.id !== id) return;
-    if (typeof j.count !== 'number' || j.count < from) { loadDialog(); return; }
-    var add = j.messages || [];
-    if (add.length) {
-      appendMessages(add);
-      if (curData) curData.messages = (curData.messages || []).concat(add);
-    }
-    lastCount = j.count;
-    if (deltaAgain) { deltaAgain = false; loadDelta(); }
+    if (!j.chats) return;
+    return applyChats(j.chats).then(function () {
+      dialogs = j.chats.map(chatOut);
+      if (cur) {
+        var d = null;
+        for (var i = 0; i < dialogs.length; i++) if (dialogs[i].id === cur.id) { d = dialogs[i]; break; }
+        if (!d) {
+          cur = null; curData = null; lastCount = -1;
+          $('log').innerHTML = ''; $('title').textContent = 'выберите переписку';
+        } else cur = d;
+      }
+      renderAll();
+    });
   });
 }
 
