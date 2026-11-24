@@ -76,6 +76,8 @@ header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1
 .m img{max-width:100%;border-radius:8px;display:block;margin-top:6px;cursor:zoom-in;background:#0d1013;min-height:40px}
 .m .mimg{position:relative}
 .m .shr{position:absolute;right:6px;top:6px;background:rgba(12,16,20,.72);color:#cfe3ff;border:0;border-radius:8px;padding:3px 7px;font-size:12px;cursor:pointer}
+.m .dl{position:absolute;right:6px;bottom:6px;background:rgba(12,16,20,.72);color:#cfe3ff;border-radius:8px;padding:3px 8px;font-size:13px;text-decoration:none}
+.m .dl:hover,.m .shr:hover{background:rgba(40,80,140,.9)}
 #typing{display:none;padding:2px 14px 6px;color:#8b949e;font-size:12.5px}
 #typing.on{display:block}
 #form{display:flex;gap:8px;align-items:flex-end;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #262c34;background:#14181c}
@@ -596,6 +598,12 @@ function imageSrc(link, small) {
   return base + link + '?v=' + (small ? 'small' : 'full') + '&tk=' + encodeURIComponent(tok);
 }
 
+// полный файл как скачивание: имя берётся из паспорта на сервере
+function fileDownload(link) {
+  if (!link) return '#';
+  return base + link + (link.indexOf('?') >= 0 ? '&' : '?') + 'raw=1&dl=1&tk=' + encodeURIComponent(tok);
+}
+
 // один элемент сообщения (и для полной отрисовки, и для догрузки дельты)
 function msgEl(m) {
   var mine = (me || '').toLowerCase();
@@ -619,10 +627,19 @@ function msgEl(m) {
       var im = document.createElement('img');
       im.loading = 'lazy';
       im.alt = 'картинка';
+      // progressive JPEG: браузер рисует его по мере прихода байтов
       im.src = imageSrc(m.link, true);
       im.onclick = function () { window.open(imageSrc(m.link, false), '_blank'); };
       im.onerror = function () { this.onerror = null; this.src = imageSrc(m.link, false); };
       wrap.appendChild(im);
+      // оригинал — линейкой: изначальное название сохраняется в паспорте файла
+      var dl = document.createElement('a');
+      dl.className = 'dl';
+      dl.title = 'скачать оригинал (как загружено)';
+      dl.textContent = '⬇';
+      dl.href = fileDownload(m.link);
+      dl.setAttribute('download', '');
+      wrap.appendChild(dl);
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'shr';
@@ -764,20 +781,70 @@ function shareImage(link) {
   });
 }
 
+// sha256 содержимого на клиенте: если такой файл уже есть, грузить нечего
+function sha256hex(buf) {
+  if (!window.crypto || !crypto.subtle) return Promise.resolve('');
+  try {
+    return crypto.subtle.digest('SHA-256', buf).then(function (h) {
+      var b = new Uint8Array(h), s = '';
+      for (var i = 0; i < b.length; i++) s += (b[i] < 16 ? '0' : '') + b[i].toString(16);
+      return s;
+    }).catch(function () { return ''; });
+  } catch (e) { return Promise.resolve(''); }
+}
+
 function upload(file) {
   if (!file || !cur) return;
   if (file.size > 24 * 1024 * 1024) { toast('Файл больше 24 МБ'); return; }
-  setBusy(true, 'загружаю картинку…');
-  var q = '/__img/upload?name=' + encodeURIComponent(file.name) + '&id=' + encodeURIComponent(cur.id);
-  fetchJSON(base + q, {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': file.type || 'application/octet-stream' },
-    body: file
-  }, 120000).then(function (r) {
+  setBusy(true, 'считаю хеш…');
+  var reader = new FileReader();
+  reader.onload = function () {
+    sha256hex(reader.result).then(function (sha) {
+      if (!sha) { sendFile(file, ''); return; }
+      // такой файл уже есть? тогда не грузим — показываем готовый
+      post('/__file/check', { sha: sha }, 15000).then(function (r) {
+        var j = r.json || {};
+        if (r.ok && j.exists && j.file && j.file.id) {
+          post('/__file/link', { file: j.file.id, chat: cur.id }, 15000).then(function (r2) {
+            setBusy(false);
+            if (!r2.ok) { toast((r2.json || {}).error || 'не получилось показать файл'); return; }
+            toast('такой файл уже был — показан без загрузки');
+            loadDialog();
+          });
+          return;
+        }
+        sendFile(file, sha);
+      }).catch(function () { sendFile(file, sha); });
+    });
+  };
+  reader.onerror = function () { setBusy(false); toast('не смог прочитать файл'); };
+  reader.readAsArrayBuffer(file);
+}
+
+// сама отправка байтов, с процентом загрузки (fetch прогресс не показывает)
+function sendFile(file, sha) {
+  if (!cur) return;
+  var q = '/__file/upload?name=' + encodeURIComponent(file.name) + '&id=' + encodeURIComponent(cur.id) +
+          (sha ? '&sha=' + sha : '');
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', base + q, true);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + tok);
+  xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+  xhr.upload.onprogress = function (e) {
+    if (e.lengthComputable && e.total > 0)
+      setBusy(true, 'загружаю ' + Math.round(100 * e.loaded / e.total) + '%');
+  };
+  xhr.onload = function () {
     setBusy(false);
-    if (!r.ok) { toast((r.json || {}).error || 'не загрузилось'); return; }
+    var j = {};
+    try { j = JSON.parse(xhr.responseText || '{}'); } catch (e) {}
+    if (xhr.status !== 200) { toast(j.error || 'не загрузилось'); return; }
+    if (j.dup) toast('такой файл уже был — показан готовый');
     loadDialog();
-  });
+  };
+  xhr.onerror = function () { setBusy(false); toast('нет связи'); };
+  setBusy(true, 'загружаю…');
+  xhr.send(file);
 }
 
 // ---------- канал событий ----------
