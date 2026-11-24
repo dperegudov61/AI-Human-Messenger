@@ -352,8 +352,15 @@ function takeTokenFromUrl() {
   if (!m) return '';
   var t = '';
   try { t = decodeURIComponent(m[1]); } catch (e) { return ''; }
-  if (t) { lss(TOK, t); try { history.replaceState(null, '', location.pathname); } catch (e) {} }
-  return t;
+  if (t) {
+    // ?tk=<ключ> — это быстрый ключ устройства (так работает ссылка из админки),
+    // а не сеанс: кладём его в door.key, а страница сама обменяет его на токен
+    // через /__door/auth. Сеанс от прежнего входа сразу забываем.
+    lss('door.key', t);
+    lsd(TOK);
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
+  return '';
 }
 
 // личная ссылка вида /AI-Human-Messenger/<ключ> (её отдаёт 404.html — копия страницы):
@@ -1025,7 +1032,7 @@ function removeChat(d) {
 
 // ---------- мелочи ----------
 function renderManage() {
-  $('acct').onclick = function () { location.href = GH + '/accounts/?next=' + encodeURIComponent(PAGEURL); };
+  $('acct').onclick = function () { location.href = GH + '/account/'; };
   $('actback').onclick = function () {
     post('/__adm/act', { user: '' }, 10000).then(function () {
       actName = ''; showMe(); refreshDialogs();
