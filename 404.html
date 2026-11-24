@@ -374,7 +374,8 @@ function takeKeyFromPath() {
   return m[1];
 }
 
-function boot() {
+function boot(retry) {
+  retry = retry || 0;
   net(false, 'ищу сервер…');
   takeKeyFromPath();
   var local = /^(127\.0\.0\.1|localhost)$/i.test(location.hostname);
@@ -383,6 +384,7 @@ function boot() {
     if (!url) {
       net(false, 'сервер не отвечает');
       showLogin('Сервер не на связи', 'Включите ПК (окно «2. Сервер») — страница сама найдёт новый адрес моста.');
+      if (retry < 1) setTimeout(function () { boot(retry + 1); }, 2500);
       return;
     }
     base = url.replace(/\/+$/, '');
@@ -401,6 +403,13 @@ function boot() {
             if (ok2) { hideLogin(); start(); }
             else showLogin('Вход больше не действует', 'Ключ этого устройства не принят — войдите заново.');
           });
+        }
+        // Мост мог сменить адрес посреди работы: связь оборвалась — ключ НЕ стираем,
+        // а ищем сервер заново. Ключ гасим только при явном отказе (401/403).
+        if (r.status === 0) {
+          showLogin('Связь оборвалась', 'Страница ищет новый адрес моста — подождите пару секунд или нажмите «Проверить связь ещё раз».');
+          if (retry < 1) setTimeout(function () { boot(retry + 1); }, 2500);
+          return;
         }
         lsd('door.key');
         showLogin('Вход больше не действует', 'Ключ этого устройства не принят — войдите заново.');
@@ -486,8 +495,8 @@ function iconOf(d) {
   return d.model ? '💬' : '·';
 }
 function titleOf(d) {
-  if (d.title && d.title !== 'Новый чат') return d.title;
   if (d.shared) return 'Общий чат';
+  if (d.title && d.title !== 'Новый чат' && d.title !== 'без названия') return d.title;
   if (d.kind === 'pm') return d.peer || 'личная переписка';
   return d.title || 'Новый чат';
 }
