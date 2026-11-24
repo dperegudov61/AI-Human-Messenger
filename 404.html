@@ -68,6 +68,8 @@ header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1
 .m.u{align-self:flex-end;background:#2b5f96;color:#f2f7ff;border-bottom-right-radius:4px}
 .m.a{align-self:flex-start;background:#1c2229;color:#e6e9ee;border-bottom-left-radius:4px}
 .m.th{align-self:flex-start;background:#1a2129;color:#9fb3c8;font-size:13.5px}
+.m.pend{opacity:.5}
+.m.err{box-shadow:0 0 0 1px #b4453c inset;cursor:pointer}
 .m.e{align-self:flex-start;background:#3a2020;color:#ffb4b4;font-size:13.5px}
 .m .who{font-size:11.5px;color:#8fb8e0;margin-bottom:3px}
 .m .tm{font-size:10.5px;color:#789;margin-left:6px}
@@ -196,7 +198,7 @@ var STALE_MIN = 60;
 var $ = function (id) { return document.getElementById(id); };
 var base = '', tok = '', me = '', realMe = '', actName = '', admin = false;
 var dialogs = [], people = [], models = [], cur = null, curData = null;
-var busy = false, pollT = 0, lastCount = -1, tickN = 0;
+var busy = false, lastCount = -1;
 
 function ls(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
 function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -384,7 +386,8 @@ function boot(retry) {
     if (!url) {
       net(false, 'сервер не отвечает');
       showLogin('Сервер не на связи', 'Включите ПК (окно «2. Сервер») — страница сама найдёт новый адрес моста.');
-      if (retry < 1) setTimeout(function () { boot(retry + 1); }, 2500);
+      // пробуем сами, пока не найдём: 2,5 → 15 с (без кнопок и перезагрузок)
+      setTimeout(function () { boot(retry + 1); }, Math.min(15000, 2500 * Math.pow(1.4, Math.min(retry, 8))));
       return;
     }
     base = url.replace(/\/+$/, '');
@@ -441,9 +444,7 @@ function start() {
   loadModels();
   refreshDialogs();
   loadPeople();
-  clearInterval(pollT);
-  pollT = setInterval(tick, 6000);
-  setInterval(function () { if (base && tok) api('/__ping', { ms: 6000 }); }, 20000);
+  channel();          // канал событий: вместо опроса диалога каждые 6 секунд
 }
 
 // «Сергей (Дима Администратор)» — кто на самом деле держит сессию
@@ -594,12 +595,10 @@ function imageSrc(link, small) {
   return base + link + '?v=' + (small ? 'small' : 'full') + '&tk=' + encodeURIComponent(tok);
 }
 
-function drawMessages(msgs) {
-  var log = $('log');
-  log.innerHTML = '';
+// один элемент сообщения (и для полной отрисовки, и для догрузки дельты)
+function msgEl(m) {
   var mine = (me || '').toLowerCase();
-  msgs.forEach(function (m) {
-    var el = document.createElement('div');
+  var el = document.createElement('div');
     var own = m.role === 'user' && (!m.author || m.author.toLowerCase() === mine);
     el.className = 'm ' + (m.role === 'assistant' ? (m.content.indexOf('⏹') === 0 ? 'th' : 'a') : (own ? 'u' : 'a'));
     if (m.author && !own) {
@@ -631,10 +630,23 @@ function drawMessages(msgs) {
       b.onclick = function () { shareImage(m.link); };
       wrap.appendChild(b);
       el.appendChild(wrap);
-    }
-    log.appendChild(el);
-  });
+  }
+  return el;
+}
+
+function drawMessages(msgs) {
+  var log = $('log');
+  log.innerHTML = '';
+  msgs.forEach(function (m) { log.appendChild(msgEl(m)); });
   log.scrollTop = log.scrollHeight;
+}
+
+// добавить только новые сообщения — без перерисовки всего и без прыжка прокрутки
+function appendMessages(msgs) {
+  var log = $('log');
+  var near = (log.scrollHeight - log.scrollTop - log.clientHeight) < 120;
+  msgs.forEach(function (m) { log.appendChild(msgEl(m)); });
+  if (near) log.scrollTop = log.scrollHeight;
 }
 
 // ---------- отправка ----------
@@ -654,14 +666,56 @@ function send() {
   textEl.value = '';
   if (isAiDialog()) return sendAi(q);
   setBusy(true, 'отправляю…');
-  post('/__msg', { id: cur.id, text: q }, 20000).then(function (r) {
-    setBusy(false);
-    if (!r.ok) {
-      toast((r.json || {}).error || ('не отправилось (HTTP ' + r.status + ')'));
-      textEl.value = q;
+  var cid = newCid();
+  var pending = pendingEl(q);
+  deliver(cur.id, q, cid, pending, 0);
+}
+
+// ключ сообщения: повтор после обрыва не задваивает запись (сервер помнит cid)
+function newCid() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+// сообщение видно сразу, полупрозрачным, до подтверждения сервером
+function pendingEl(text) {
+  var log = $('log');
+  var el = document.createElement('div');
+  el.className = 'm u pend';
+  var t = document.createElement('div');
+  t.textContent = text;
+  el.appendChild(t);
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+function deliver(id, text, cid, pending, tryN) {
+  post('/__msg', { id: id, text: text, cid: cid }, 20000).then(function (r) {
+    if (r.ok) {
+      setBusy(false);
+      if (pending && pending.parentNode) pending.parentNode.removeChild(pending);
+      if (cur && cur.id === id) {
+        if (lastCount >= 0) loadDelta(); else loadDialog();
+      }
       return;
     }
-    loadDialog();
+    // ответ мог потеряться уже после записи на диск — повторяем с тем же cid
+    if ((r.status === 0 || r.status >= 500) && tryN < 2) {
+      setTimeout(function () { deliver(id, text, cid, pending, tryN + 1); }, 2500);
+      return;
+    }
+    setBusy(false);
+    if (pending) {
+      pending.className = 'm u err';
+      pending.title = 'не отправлено — нажмите, чтобы повторить';
+      pending.onclick = function () {
+        if (pending.parentNode) pending.parentNode.removeChild(pending);
+        var again = pendingEl(text);
+        setBusy(true, 'отправляю…');
+        deliver(id, text, cid, again, 0);
+      };
+    }
+    toast((r.json || {}).error || (r.status ? 'не отправилось (HTTP ' + r.status + ')' : 'нет связи — нажмите на сообщение, чтобы повторить'));
   });
 }
 
@@ -725,19 +779,133 @@ function upload(file) {
   });
 }
 
-// ---------- опрос ----------
-function tick() {
-  if (!base || !tok || busy) return;
-  tickN++;
-  if (curData && (curData.shared || curData.kind === 'pm')) {
-    api('/__dialog?id=' + encodeURIComponent(cur.id), { ms: 12000 }).then(function (r) {
-      var j = r.json || {};
-      if (!j.id || busy) return;
-      var n = (j.messages || []).length;
-      if (n !== lastCount) { curData = j; lastCount = n; drawMessages(j.messages || []); refreshDialogs(); }
-    });
-    if (tickN % 3 === 0) loadPeople();
+// ---------- канал событий ----------
+// Сервер держит запрос до 25 с и отвечает сразу, как только что-то случилось.
+// Событие — уведомление: {s: номер, k: вид, c: диалог, a: кто, n: сколько сообщений}.
+// Сами сообщения забираем дельтой /__dialog?after=N — сотни байт вместо всего диалога.
+var chSeq = 0, chDown = 0, chBusy = false, chTimer = 0, chWait = 25;
+var listT = 0, peopleT = 0, deltaBusy = false, deltaAgain = false;
+
+function channel() {
+  chSeq = Number(ls('ch.seq') || 0) || 0;
+  chDown = 0;
+  poll();
+}
+
+function poll() {
+  clearTimeout(chTimer);
+  if (!base || !tok || chBusy) return;
+  chBusy = true;
+  var t0 = Date.now();
+  post('/__events', { since: chSeq, wait: chWait }, 40000).then(function (r) {
+    chBusy = false;
+    var j = r.json || {};
+    if (r.status === 401 || r.status === 403) {
+      lsd(TOK); tok = '';
+      showLogin('Вход больше не действует', 'Войдите заново — ключ или пароль устарели.');
+      return;
+    }
+    var ok = r.ok && typeof j.seq === 'number';
+    var wait = 0;
+    if (ok) {
+      chDown = 0;
+      chWait = 25;
+      net(true, 'сервер на связи');
+      if (j.reset) resync();
+      chSeq = j.seq;
+      lss('ch.seq', String(chSeq));
+      var list = j.events || [];
+      for (var i = 0; i < list.length; i++) onEvent(list[i]);
+      if (!list.length && Date.now() - t0 < 800) wait = 800;   // не крутимся вхолостую
+    } else {
+      chDown++;
+      // если туннель рвёт долгие запросы — держим короче, чтобы не молотить вхолостую
+      if (chDown >= 3 && chWait > 12) chWait = 12;
+      net(false, chDown > 2 ? 'связь оборвалась — ищу мост' : 'восстанавливаю связь…');
+      if (chDown === 2) refind();
+      wait = Math.min(15000, 800 * Math.pow(2, Math.min(chDown, 4)));
+    }
+    chTimer = setTimeout(poll, wait);
+  });
+}
+
+// новый адрес моста (туннель перезапускается сам и меняет адрес)
+function refind() {
+  // локальная проверка: адрес задан браузером, искать мост не нужно
+  if (/^(127\.0\.0\.1|localhost)$/i.test(location.hostname)) return;
+  findLive().then(function (u) {
+    if (!u) return;
+    u = u.replace(/\/+$/, '');
+    if (u !== base) { base = u; lss(URLKEY, base); }
+  });
+}
+
+// сервер перезапустился или мы слишком долго были без связи — полная сверка
+function resync() {
+  refreshDialogs();
+  loadPeople();
+  if (cur) loadDialog();   // могли прийти сообщения, пока нас не было
+}
+
+function onEvent(e) {
+  var k = (e && e.k) || '';
+  if (k === 'msg' || k === 'img') {
+    if (cur && e.c === cur.id) {
+      if (typeof e.n === 'number' && lastCount >= 0 && e.n > lastCount) loadDelta();
+      else if (!busy) loadDialog();
+    }
+    listDirty();
+  } else if (k === 'chat' || k === 'acc') {
+    listDirty();
+  } else if (k === 'people') {
+    clearTimeout(peopleT);
+    peopleT = setTimeout(function () { loadPeople(); }, 400);
   }
+}
+
+function listDirty() {
+  clearTimeout(listT);
+  listT = setTimeout(refreshList, 250);
+}
+
+// только список чатов (дешевле, чем /__boot с моделями и статусом)
+function refreshList() {
+  return api('/__dialogs', { ms: 15000 }).then(function (r) {
+    var j = r.json || {};
+    if (!j.dialogs) return;
+    dialogs = j.dialogs;
+    if (cur) {
+      var d = null;
+      for (var i = 0; i < dialogs.length; i++) if (dialogs[i].id === cur.id) { d = dialogs[i]; break; }
+      if (!d) {
+        cur = null; curData = null; lastCount = -1;
+        $('log').innerHTML = ''; $('title').textContent = 'выберите переписку';
+      } else cur = d;
+    }
+    renderAll();
+  });
+}
+
+// доехать только новыми сообщениями: ?after=<сколько уже есть>
+function loadDelta() {
+  if (!cur) return Promise.resolve();
+  if (deltaBusy) { deltaAgain = true; return Promise.resolve(); }
+  deltaBusy = true;
+  var id = cur.id;
+  var from = Math.max(0, lastCount);
+  return api('/__dialog?id=' + encodeURIComponent(id) + '&after=' + from, { ms: 15000 }).then(function (r) {
+    deltaBusy = false;
+    var j = r.json || {};
+    if (!j.id || !cur || cur.id !== id) return;
+    if (typeof j.count !== 'number' || j.count < from) { loadDialog(); return; }
+    var add = j.messages || [];
+    if (add.length) {
+      appendMessages(add);
+      if (curData) curData.messages = (curData.messages || []).concat(add);
+    }
+    lastCount = j.count;
+    if (deltaAgain) { deltaAgain = false; loadDelta(); }
+  });
 }
 
 // ---------- модальные окна ----------
