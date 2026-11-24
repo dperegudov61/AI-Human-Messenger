@@ -198,7 +198,7 @@ var STALE_MIN = 60;
 var $ = function (id) { return document.getElementById(id); };
 var base = '', tok = '', me = '', realMe = '', actName = '', admin = false;
 var dialogs = [], people = [], models = [], cur = null, curData = null;
-var busy = false, lastCount = -1;
+var busy = false, lastCount = -1, bootT = 0;
 
 function ls(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
 function lss(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -378,6 +378,7 @@ function takeKeyFromPath() {
 
 function boot(retry) {
   retry = retry || 0;
+  clearTimeout(bootT);
   net(false, 'ищу сервер…');
   takeKeyFromPath();
   var local = /^(127\.0\.0\.1|localhost)$/i.test(location.hostname);
@@ -387,7 +388,7 @@ function boot(retry) {
       net(false, 'сервер не отвечает');
       showLogin('Сервер не на связи', 'Включите ПК (окно «2. Сервер») — страница сама найдёт новый адрес моста.');
       // пробуем сами, пока не найдём: 2,5 → 15 с (без кнопок и перезагрузок)
-      setTimeout(function () { boot(retry + 1); }, Math.min(15000, 2500 * Math.pow(1.4, Math.min(retry, 8))));
+      bootT = setTimeout(function () { boot(retry + 1); }, Math.min(15000, 2500 * Math.pow(1.4, Math.min(retry, 8))));
       return;
     }
     base = url.replace(/\/+$/, '');
@@ -783,10 +784,12 @@ function upload(file) {
 // Сервер держит запрос до 25 с и отвечает сразу, как только что-то случилось.
 // Событие — уведомление: {s: номер, k: вид, c: диалог, a: кто, n: сколько сообщений}.
 // Сами сообщения забираем дельтой /__dialog?after=N — сотни байт вместо всего диалога.
-var chSeq = 0, chDown = 0, chBusy = false, chTimer = 0, chWait = 25;
+var chSeq = 0, chDown = 0, chBusy = false, chTimer = 0, chWait = 25, chOn = false;
 var listT = 0, peopleT = 0, deltaBusy = false, deltaAgain = false;
 
 function channel() {
+  if (chOn) return;   // один канал на страницу
+  chOn = true;
   chSeq = Number(ls('ch.seq') || 0) || 0;
   chDown = 0;
   poll();
