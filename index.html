@@ -466,6 +466,12 @@ function iconOf(d) {
   if (d.kind === 'pm') return '✉';
   return d.model ? '💬' : '·';
 }
+function titleOf(d) {
+  if (d.title && d.title !== 'Новый чат') return d.title;
+  if (d.shared) return 'Общий чат';
+  if (d.kind === 'pm') return d.peer || 'личная переписка';
+  return d.title || 'Новый чат';
+}
 function subOf(d) {
   var bits = [];
   if (d.shared) bits.push('общий чат');
@@ -486,7 +492,7 @@ function renderList(boxId, list, empty) {
   list.forEach(function (d) {
     var el = document.createElement('div');
     el.className = 'it' + (cur && cur.id === d.id ? ' on' : '');
-    el.innerHTML = '<span class="ic">' + iconOf(d) + '</span><span class="tt">' + esc(d.title) +
+    el.innerHTML = '<span class="ic">' + iconOf(d) + '</span><span class="tt">' + esc(titleOf(d)) +
       '<div class="sub">' + esc(subOf(d)) + '</div></span>' +
       (d.shared ? '' : '<button class="del" type="button" title="удалить">✕</button>');
     el.onclick = function () { open(d); };
@@ -534,7 +540,7 @@ function loadModels() {
 // ---------- переписка ----------
 function open(d) {
   cur = d; lastCount = -1;
-  $('title').textContent = d.title || d.id;
+  $('title').textContent = titleOf(d);
   $('hint').textContent = d.kind === 'pm' ? 'личная переписка' : d.shared ? 'общий чат' : (d.model || '');
   if (window.innerWidth <= 820) $('side').className = 'hide';
   renderAll();
@@ -1007,7 +1013,7 @@ function removeChat(d) {
 
 // ---------- мелочи ----------
 function renderManage() {
-  $('acct').onclick = function () { location.href = GH + '/accounts/'; };
+  $('acct').onclick = function () { location.href = GH + '/accounts/?next=' + encodeURIComponent(PAGEURL); };
   $('actback').onclick = function () {
     post('/__adm/act', { user: '' }, 10000).then(function () {
       actName = ''; showMe(); refreshDialogs();
