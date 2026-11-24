@@ -141,6 +141,24 @@ pre.log{margin:0;max-height:52vh;overflow:auto;background:#0b0e12;border:1px sol
     <!-- ---------- люди ---------- -->
     <div class="pane" id="p-ppl">
       <div class="card">
+        <h2>Новая учётная запись</h2>
+        <p class="hint">Имя, тип и пароль. Если оставить пароль пустым, сервер выдаст случайный — он показывается один раз.</p>
+        <label class="f">Имя</label>
+        <div class="row"><input id="cname" maxlength="24" placeholder="например, Мария" style="flex:1;min-width:150px"></div>
+        <label class="f">Тип</label>
+        <div class="row"><select id="crole" style="max-width:240px">
+          <option value="user">обычный</option>
+          <option value="admin">администратор</option>
+        </select></div>
+        <label class="f">Пароль</label>
+        <div class="row"><input id="cpass" placeholder="оставьте пустым — сервер выдаст случайный" style="flex:1;min-width:150px"></div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn ok" id="bcreate">Создать учётную запись</button>
+        </div>
+        <div class="out" id="cout"></div>
+      </div>
+
+      <div class="card">
         <h2>Люди <span class="mut" id="pcount" style="font-weight:400;font-size:12.5px"></span></h2>
         <p class="hint">Зелёная точка — на связи сейчас. Под именем — id (8 цифр) и время последнего входа.</p>
         <div class="row" style="margin-bottom:8px">
@@ -575,6 +593,33 @@ function loadPeople() {
 }
 $('preload').onclick = loadPeople;
 
+// ---------- новая учётная запись ----------
+$('bcreate').onclick = function () {
+  var nm = $('cname').value.trim();
+  var el = $('cout');
+  if (!nm) { el.className = 'out bad'; el.textContent = 'введите имя'; $('cname').focus(); return; }
+  var b = $('bcreate');
+  b.disabled = true; el.className = 'out'; el.textContent = 'создаю…';
+  post('/__adm/user', { action: 'create', value: nm, pass: $('cpass').value, role: $('crole').value }, 25000)
+    .then(function (r) {
+      b.disabled = false;
+      var j = r.json || {};
+      if (!r.ok || j.ok === false) {
+        el.className = 'out bad';
+        el.textContent = 'не вышло: ' + (j.error || ('HTTP ' + r.status));
+        return;
+      }
+      el.className = 'out good';
+      el.textContent = 'Создано: ' + j.name + ' · id ' + j.id + '\nпароль: ' + j.pass +
+        (j.generated ? ' (выдан сервером)' : '') + '\nЗапишите пароль сейчас — второй раз он не покажется.';
+      $('cname').value = '';
+      $('cpass').value = '';
+      $('crole').value = 'user';
+      loadPeople();
+    })
+    .catch(function () { b.disabled = false; el.className = 'out bad'; el.textContent = 'связь оборвалась'; });
+};
+
 function renderPeople() {
   var box = $('list');
   box.innerHTML = '';
@@ -594,7 +639,7 @@ function renderPeople() {
 function pick(u) {
   cur = u;
   renderPeople();
-  $('person').style.display = '';
+  $('person').style.display = 'block';
   $('pname').textContent = u.name + (u.role === 'admin' ? ' · админ' : '');
   $('pmeta').textContent = 'id ' + (u.id || '—') + ' · на связи: ' + (u.online ? 'да' : 'нет') +
     ' · вход: ' + ago(u.keySeen || u.seen) + ' · сессий: ' + (u.sess || 0) +
