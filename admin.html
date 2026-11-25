@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Админка · AI and Human</title>
-<script src="theme.js"></script>
+<meta name="theme-color" content="#0f1216">
+<title data-i18n="admin.title">Admin · AI and Human</title>
+<script src="theme.js" data-i18n="strings.tsv"></script>
 <style>
 /* ---------- палитра: тёмная (по умолчанию) и светлая ----------
    Все цвета берутся только отсюда; тему переключает атрибут data-theme на <html>
@@ -122,23 +123,23 @@ pre.log{margin:0;max-height:52vh;overflow:auto;background:var(--code);border:1px
 <body>
 
 <nav id="nav">
-  <div class="brand">Админка<small>AI and Human</small></div>
-  <div class="sec">Сервер</div>
-  <a class="it" data-p="sys">Система</a>
-  <div class="sec">Люди</div>
-  <a class="it" data-p="ppl">Список людей</a>
+  <div class="brand"><span data-i18n="admin.brand">Admin</span><small>AI and Human</small></div>
+  <div class="sec" data-i18n="admin.sec.server">Server</div>
+  <a class="it" data-p="sys" data-i18n="admin.sec.system">System</a>
+  <div class="sec" data-i18n="chat.people">People</div>
+  <a class="it" data-p="ppl" data-i18n="admin.nav.people">People list</a>
   <div class="me">
     <b id="mename">…</b>
     <span class="ui-sw" data-ui="switch"></span>
-    <a href="index.html">← в чат</a>
+    <a href="index.html" data-i18n="admin.back.chat">← to chat</a>
   </div>
 </nav>
 
 <main>
   <header>
-    <button id="burger" type="button" aria-label="меню">☰</button>
-    <h1 id="ttl">Система</h1>
-    <div id="net"><span class="dot" id="ndot"></span><span id="ntext">ищу сервер…</span></div>
+    <button id="burger" type="button" aria-label="menu" data-i18n-aria="chat.menu">☰</button>
+    <h1 id="ttl" data-i18n="admin.sec.system">System</h1>
+    <div id="net"><span class="dot" id="ndot"></span><span id="ntext" data-i18n="chat.net.searching">looking for server…</span></div>
   </header>
 
   <div id="body">
@@ -146,26 +147,26 @@ pre.log{margin:0;max-height:52vh;overflow:auto;background:var(--code);border:1px
     <!-- ---------- система ---------- -->
     <div class="pane on" id="p-sys">
       <div class="card">
-        <h2>Команды серверу</h2>
-        <p class="hint">Команды выполняются только после капчи. После остановки сервера страница перестанет отвечать — запустить снова можно только на ПК.</p>
+        <h2 data-i18n="admin.cmd.title">Server commands</h2>
+        <p class="hint" data-i18n="admin.cmd.hint">Commands run only after a captcha. After the server stops, this page stops answering — it can only be started again on the PC.</p>
         <div class="row">
-          <button class="btn mid" data-cmd="stopgen">Остановить генерации</button>
-          <button class="btn warn" data-cmd="restart">Перезапустить сервер</button>
-          <button class="btn danger" data-cmd="stop">Остановить сервер</button>
-          <button class="btn danger" data-cmd="shutdown">Выключить ПК</button>
-          <button class="btn" data-cmd="cancel">Отменить выключение</button>
+          <button class="btn mid" data-cmd="stopgen" data-i18n="admin.cmd.stopgen">Stop generations</button>
+          <button class="btn warn" data-cmd="restart" data-i18n="admin.cmd.restart">Restart the server</button>
+          <button class="btn danger" data-cmd="stop" data-i18n="admin.cmd.stop">Stop the server</button>
+          <button class="btn danger" data-cmd="shutdown" data-i18n="admin.cmd.shutdown">Shut down the PC</button>
+          <button class="btn" data-cmd="cancel" data-i18n="admin.cmd.cancel">Cancel shutdown</button>
         </div>
         <div class="out" id="cmdout"></div>
       </div>
 
       <div class="card">
-        <h2>Журналы</h2>
-        <p class="hint">Последние строки файла из папки logs. Автообновление каждые 5 секунд.</p>
+        <h2 data-i18n="admin.logs.title">Logs</h2>
+        <p class="hint" data-i18n="admin.logs.hint">The last lines of a file from the logs folder. Auto-refresh every 5 seconds.</p>
         <div class="row">
           <select id="logfile" style="flex:1;min-width:160px"></select>
-          <button class="btn" id="logreload">Обновить</button>
+          <button class="btn" id="logreload" data-i18n="admin.refresh">Refresh</button>
           <label class="row" style="gap:6px;color:var(--tx3);font-size:13px;min-height:40px">
-            <input type="checkbox" id="logauto" checked style="width:auto;min-height:0"> авто
+            <input type="checkbox" id="logauto" checked style="width:auto;min-height:0"> <span data-i18n="admin.auto">auto</span>
           </label>
         </div>
         <pre class="log" id="logview">—</pre>
@@ -175,28 +176,28 @@ pre.log{margin:0;max-height:52vh;overflow:auto;background:var(--code);border:1px
     <!-- ---------- люди ---------- -->
     <div class="pane" id="p-ppl">
       <div class="card">
-        <h2>Новая учётная запись</h2>
-        <p class="hint">Имя, тип и пароль. Если оставить пароль пустым, сервер выдаст случайный — он показывается один раз.</p>
-        <label class="f">Имя</label>
-        <div class="row"><input id="cname" maxlength="24" placeholder="например, Мария" style="flex:1;min-width:150px"></div>
-        <label class="f">Тип</label>
+        <h2 data-i18n="admin.newacc.title">New account</h2>
+        <p class="hint" data-i18n="admin.newacc.hint">Name, type and password. If the password is left empty, the server makes a random one — it is shown once.</p>
+        <label class="f" data-i18n="admin.name">Name</label>
+        <div class="row"><input id="cname" maxlength="24" placeholder="e.g. Maria" data-i18n-ph="admin.ph.name" style="flex:1;min-width:150px"></div>
+        <label class="f" data-i18n="admin.type">Type</label>
         <div class="row"><select id="crole" style="max-width:240px">
-          <option value="user">обычный</option>
-          <option value="admin">администратор</option>
+          <option value="user" data-i18n="admin.type.user">regular</option>
+          <option value="admin" data-i18n="chat.act.admin">admin</option>
         </select></div>
-        <label class="f">Пароль</label>
-        <div class="row"><input id="cpass" placeholder="оставьте пустым — сервер выдаст случайный" style="flex:1;min-width:150px"></div>
+        <label class="f" data-i18n="admin.pass">Password</label>
+        <div class="row"><input id="cpass" placeholder="leave empty — the server will make a random one" data-i18n-ph="admin.ph.pass" style="flex:1;min-width:150px"></div>
         <div class="row" style="margin-top:12px">
-          <button class="btn ok" id="bcreate">Создать учётную запись</button>
+          <button class="btn ok" id="bcreate" data-i18n="admin.create.go">Create account</button>
         </div>
         <div class="out" id="cout"></div>
       </div>
 
       <div class="card">
-        <h2>Люди <span class="mut" id="pcount" style="font-weight:400;font-size:12.5px"></span></h2>
-        <p class="hint">Зелёная точка — на связи сейчас. Под именем — id (8 цифр) и время последнего входа.</p>
+        <h2><span data-i18n="admin.sec.people">People</span> <span class="mut" id="pcount" style="font-weight:400;font-size:12.5px"></span></h2>
+        <p class="hint" data-i18n="admin.people.hint">A green dot means online now. Under the name — the id (8 digits) and the last sign-in time.</p>
         <div class="row" style="margin-bottom:8px">
-          <button class="btn small" id="preload">Обновить</button>
+          <button class="btn small" id="preload" data-i18n="admin.refresh">Refresh</button>
           <span class="mut" id="pupd" style="font-size:12px"></span>
         </div>
         <div id="list"></div>
@@ -206,34 +207,34 @@ pre.log{margin:0;max-height:52vh;overflow:auto;background:var(--code);border:1px
         <h2 id="pname">—</h2>
         <p class="hint" id="pmeta"></p>
 
-        <label class="f">Имя</label>
+        <label class="f" data-i18n="admin.name">Name</label>
         <div class="row">
           <input id="iname" style="flex:1;min-width:150px">
-          <button class="btn ok" id="brename">Сохранить имя</button>
+          <button class="btn ok" id="brename" data-i18n="admin.save.name">Save name</button>
         </div>
 
-        <label class="f">Пароль</label>
+        <label class="f" data-i18n="admin.pass">Password</label>
         <div class="row">
-          <input id="ipass" placeholder="оставьте пустым — сервер выдаст случайный">
-          <button class="btn ok" id="bpass">Задать пароль</button>
+          <input id="ipass" placeholder="leave empty — the server will make a random one" data-i18n-ph="admin.ph.pass">
+          <button class="btn ok" id="bpass" data-i18n="admin.set.pass">Set password</button>
         </div>
         <div class="out" id="passout"></div>
 
-        <label class="f">Тип</label>
+        <label class="f" data-i18n="admin.type">Type</label>
         <div class="row">
-          <button class="btn" id="badmin">Сделать админом</button>
-          <button class="btn" id="buser">Сделать обычным</button>
+          <button class="btn" id="badmin" data-i18n="admin.make.admin">Make admin</button>
+          <button class="btn" id="buser" data-i18n="admin.make.user">Make regular</button>
         </div>
 
-        <label class="f">Доступ</label>
+        <label class="f" data-i18n="admin.access">Access</label>
         <div class="row">
-          <button class="btn mid" id="blink">Ссылка на вход (QR)</button>
-          <button class="btn danger" id="bkick">Выкинуть со всех устройств</button>
-          <button class="btn warn" id="bact">Зайти от имени</button>
+          <button class="btn mid" id="blink" data-i18n="admin.link.qr">Sign-in link (QR)</button>
+          <button class="btn danger" id="bkick" data-i18n="admin.kick">Kick from all devices</button>
+          <button class="btn warn" id="bact" data-i18n="admin.act.as">Sign in as this person</button>
         </div>
         <div id="qr"></div>
 
-        <label class="f">Служебное</label>
+        <label class="f" data-i18n="admin.misc">Service info</label>
         <div class="out" id="pinfo"></div>
       </div>
     </div>
@@ -242,22 +243,22 @@ pre.log{margin:0;max-height:52vh;overflow:auto;background:var(--code);border:1px
 </main>
 
 <div id="cap"><div class="bx">
-  <h3 id="capt">Подтверждение</h3>
-  <p id="capm">Введите цифры с картинки — защита от случайного нажатия.</p>
+  <h3 id="capt" data-i18n="admin.cap.title">Confirmation</h3>
+  <p id="capm" data-i18n="admin.cap.hint">Enter the digits from the picture — protection against a random click.</p>
   <img id="capimg" alt="капча">
   <input id="capcode" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000">
   <div class="row" style="margin-top:10px">
-    <button class="btn ok" id="capgo">Выполнить</button>
-    <button class="btn" id="capcancel">Отмена</button>
-    <button class="btn small" id="capreload" title="другая картинка">↻</button>
+    <button class="btn ok" id="capgo" data-i18n="admin.cap.go">Run</button>
+    <button class="btn" id="capcancel" data-i18n="chat.cancel">Cancel</button>
+    <button class="btn small" id="capreload" title="another picture" data-i18n-title="admin.cap.again">↻</button>
   </div>
   <div class="out bad" id="caperr"></div>
 </div></div>
 
 <div id="login"><div class="bx">
-  <h2 id="lht">Нужен вход</h2>
-  <p id="lmsg">Админка открывается только владельцу. Войдите и вернитесь сюда.</p>
-  <a class="btn big" id="lgo" href="#">Войти</a>
+  <h2 id="lht" data-i18n="chat.login.need">Sign in needed</h2>
+  <p id="lmsg" data-i18n="admin.login.sub">The admin page opens for the owner only. Sign in and come back here.</p>
+  <a class="btn big" id="lgo" href="#" data-i18n="chat.login.go">Sign in</a>
   <div class="out" id="lerr" style="margin-top:12px"></div>
 </div></div>
 
@@ -414,7 +415,7 @@ function net(on, text) {
   $('ntext').textContent = text;
 }
 function showLogin(msg) {
-  $('lmsg').textContent = msg || 'Админка открывается только владельцу. Войдите и вернитесь сюда.';
+  $('lmsg').textContent = msg || t("admin.login.sub", "The admin page opens for the owner only. Sign in and come back here.");
   $('lgo').href = (isLocal ? '/accounts/' : '/accounts/') + '?next=' + encodeURIComponent(PAGEURL);
   $('login').className = 'on';
 }
@@ -430,17 +431,17 @@ function takeTokenFromUrl() {
 }
 
 function boot() {
-  net(false, 'ищу сервер…');
+  net(false, t("chat.net.searching", "looking for server…"));
   var ready = isLocal ? Promise.resolve(location.origin) : findLive();
   ready.then(function (url) {
     if (!url) {
-      net(false, 'сервер не отвечает');
-      showLogin('Сервер не на связи. Включите ПК — страница сама найдёт новый адрес моста.');
+      net(false, t("chat.net.down", "server is not responding"));
+      showLogin(t("admin.net.offline", "The server is not online. Turn on the PC — the page will find the new bridge address itself."));
       return;
     }
     base = url.replace(/\/+$/, '');
     if (!isLocal) lss(URLKEY, base);
-    net(true, 'сервер на связи');
+    net(true, t("chat.net.up", "server is online"));
     tok = takeTokenFromUrl() || ls(TOK);
     return verify().then(function (ok) {
       if (ok && me.length) { hideLogin(); start(); return; }
@@ -452,7 +453,7 @@ function boot() {
         return false;
       }).then(function (ok2) {
         if (ok2) { hideLogin(); start(); }
-        else showLogin('Вход больше не действует — войдите заново.');
+        else showLogin(t("admin.login.dead", "Sign-in no longer works — sign in again."));
       });
     });
   });
@@ -465,7 +466,7 @@ function verify() {
     if (r.ok && (j.user || j.ok)) {
       me = j.user || j.real || '';
       if (!j.admin) {
-        showLogin('Вы вошли как «' + me + '», но это не владелец сервера.');
+        showLogin(t("admin.login.notowner1", "You signed in as “") + me + t("admin.login.notowner2", "”, but this is not the server owner."));
         return false;
       }
       return true;
@@ -475,7 +476,7 @@ function verify() {
 }
 
 function start() {
-  $('mename').textContent = me || 'вошёл';
+  $('mename').textContent = me || t("admin.signed", "signed in");
   if (window.UI) UI.sync(base, tok);   // тема и язык — из настроек человека
   loadLogs();
   loadPeople();
@@ -491,7 +492,7 @@ function tab(name) {
   for (var i = 0; i < panes.length; i++) panes[i].className = 'pane' + (panes[i].id === 'p-' + name ? ' on' : '');
   var items = document.querySelectorAll('nav a.it');
   for (var k = 0; k < items.length; k++) items[k].className = 'it' + (items[k].getAttribute('data-p') === name ? ' on' : '');
-  $('ttl').textContent = name === 'ppl' ? 'Люди' : 'Система';
+  $('ttl').textContent = name === 'ppl' ? t("chat.people", "People") : t("admin.sec.system", "System");
   $('nav').className = 'hide';
   if (name === 'ppl') loadPeople();
   if (name === 'sys') loadLog(true);
@@ -504,7 +505,7 @@ $('burger').onclick = function () { $('nav').classList.toggle('hide'); };
 // ---------- капча и команды ----------
 function openCap(action, title) {
   capAction = action;
-  $('capt').textContent = title || 'Подтверждение';
+  $('capt').textContent = title || t("admin.cap.title", "Confirmation");
   $('caperr').textContent = '';
   $('capcode').value = '';
   $('cap').className = 'on';
@@ -519,7 +520,7 @@ function loadCap() {
       cap = j.id;
       $('capimg').src = j.png;
     } else {
-      $('caperr').textContent = 'Не удалось получить капчу: ' + (j.error || ('HTTP ' + r.status));
+      $('caperr').textContent = t('admin.cap.fail', 'Could not get the captcha:') + ' ' + (j.error || ('HTTP ' + r.status));
     }
   });
 }
@@ -528,7 +529,7 @@ $('capreload').onclick = function () { loadCap(); };
 $('capcode').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('capgo').click(); });
 $('capgo').onclick = function () {
   var code = $('capcode').value.trim();
-  if (!/^\d{4}$/.test(code)) { $('caperr').textContent = 'Нужны четыре цифры'; return; }
+  if (!/^\d{4}$/.test(code)) { $('caperr').textContent = t("admin.cap.need4", "Four digits are needed"); return; }
   $('capgo').disabled = true;
   post('/__adm/cmd', { action: capAction, capId: cap, code: code }, 30000).then(function (r) {
     $('capgo').disabled = false;
@@ -540,19 +541,19 @@ $('capgo').onclick = function () {
     }
     $('cap').className = '';
     cmdDone(capAction, j);
-  }).catch(function () { $('capgo').disabled = false; $('caperr').textContent = 'связь оборвалась'; });
+  }).catch(function () { $('capgo').disabled = false; $('caperr').textContent = t("chat.err.conn.drop", "connection dropped"); });
 };
 
 function cmdDone(action, j) {
-  var words = { stopgen: 'генерации остановлены', restart: 'сервер перезапускается (окно закроется и откроется заново)',
-    stop: 'сервер останавливается — страница скоро перестанет отвечать', shutdown: 'ПК выключится через 60 секунд. Успейте нажать «Отменить выключение».',
-    cancel: 'выключение отменено' };
+  var words = { stopgen: t("admin.cmd.done.stopgen", "generations stopped"), restart: t("admin.cmd.done.restart", "the server is restarting (the window will close and open again)"),
+    stop: t("admin.cmd.done.stop", "the server is stopping — the page will soon stop answering"), shutdown: t("admin.cmd.done.shutdown", "The PC shuts down in 60 seconds. Press “Cancel shutdown” in time."),
+    cancel: t("admin.cmd.done.cancel", "shutdown cancelled") };
   var out = $('cmdout');
   out.className = 'out good';
-  out.textContent = words[action] || 'готово';
-  if (action === 'shutdown') setTimeout(function () { out.textContent += '\nВыключение запланировано на 60 с вперёд.'; }, 50);
+  out.textContent = words[action] || t("admin.cmd.done", "done");
+  if (action === 'shutdown') setTimeout(function () { out.textContent += '\n' + t('admin.cmd.note', 'Shutdown is scheduled 60 s ahead.'); }, 50);
   if (action === 'restart' || action === 'stop') {
-    net(false, 'сервер перезапускается…');
+    net(false, t("admin.cmd.restarting", "the server is restarting…"));
     setTimeout(function () { location.reload(); }, action === 'restart' ? 8000 : 4000);
   }
 }
@@ -567,9 +568,9 @@ for (var c = 0; c < cmds.length; c++)
       });
       return;
     }
-    var titles = { stopgen: 'Остановить генерации', restart: 'Перезапустить сервер',
-      stop: 'Остановить сервер', shutdown: 'Выключить ПК' };
-    openCap(a, titles[a] || 'Подтверждение');
+    var titles = { stopgen: t("admin.cmd.stopgen", "Stop generations"), restart: t("admin.cmd.restart", "Restart the server"),
+      stop: t("admin.cmd.stop", "Stop the server"), shutdown: t("admin.cmd.shutdown", "Shut down the PC") };
+    openCap(a, titles[a] || t("admin.cap.title", "Confirmation"));
   };
 
 // ---------- журналы ----------
@@ -581,7 +582,7 @@ function loadLogs() {
     (j.files || []).forEach(function (f) {
       var o = document.createElement('option');
       o.value = f.name;
-      o.textContent = f.name + ' · ' + Math.round(f.size / 1024) + ' КБ';
+      o.textContent = f.name + ' · ' + Math.round(f.size / 1024) + ' ' + t('admin.kb', 'KB');
       sel.appendChild(o);
     });
     var want = ls('adm.log') || 'webui.log';
@@ -598,7 +599,7 @@ function loadLog(scroll) {
     if (j.error) { $('logview').textContent = '— ' + j.error; return; }
     var pre = $('logview');
     var atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 40;
-    pre.textContent = (j.lines || []).join('\n') || '(пусто)';
+    pre.textContent = (j.lines || []).join('\n') || t("admin.empty", "(empty)");
     if (scroll || atBottom) pre.scrollTop = pre.scrollHeight;
   });
 }
@@ -607,23 +608,23 @@ $('logreload').onclick = function () { loadLogs(); };
 
 // ---------- люди ----------
 function ago(t) {
-  if (!t) return 'не заходил';
+  if (!t) return t("admin.never", "never signed in");
   var d = Date.parse(t.replace(' ', 'T'));
   if (!d) return t;
   var s = Math.round((Date.now() - d) / 1000);
-  if (s < 60) return 'только что';
-  if (s < 3600) return Math.round(s / 60) + ' мин назад';
-  if (s < 86400) return Math.round(s / 3600) + ' ч назад';
-  return Math.round(s / 86400) + ' дн назад';
+  if (s < 60) return t("admin.ago.now", "just now");
+  if (s < 3600) return Math.round(s / 60) + ' ' + t('admin.ago.min', 'min ago');
+  if (s < 86400) return Math.round(s / 3600) + ' ' + t('admin.ago.hour', 'h ago');
+  return Math.round(s / 86400) + ' ' + t('admin.ago.day', 'd ago');
 }
 
 function loadPeople() {
   api('/__adm/users', { ms: 15000 }).then(function (r) {
     var j = r.json || {};
-    if (!r.ok) { $('list').textContent = 'не удалось получить список: ' + (j.error || ('HTTP ' + r.status)); return; }
+    if (!r.ok) { $('list').textContent = t('admin.err.list', 'could not get the list:') + ' ' + (j.error || ('HTTP ' + r.status)); return; }
     users = j.users || [];
     renderPeople();
-    $('pupd').textContent = 'обновлено ' + new Date().toLocaleTimeString();
+    $('pupd').textContent = t('admin.updated', 'updated') + ' ' + new Date().toLocaleTimeString();
   });
 }
 $('preload').onclick = loadPeople;
@@ -632,27 +633,27 @@ $('preload').onclick = loadPeople;
 $('bcreate').onclick = function () {
   var nm = $('cname').value.trim();
   var el = $('cout');
-  if (!nm) { el.className = 'out bad'; el.textContent = 'введите имя'; $('cname').focus(); return; }
+  if (!nm) { el.className = 'out bad'; el.textContent = t("admin.err.noname", "enter a name"); $('cname').focus(); return; }
   var b = $('bcreate');
-  b.disabled = true; el.className = 'out'; el.textContent = 'создаю…';
+  b.disabled = true; el.className = 'out'; el.textContent = t("chat.creating", "creating…");
   post('/__adm/user', { action: 'create', value: nm, pass: $('cpass').value, role: $('crole').value }, 25000)
     .then(function (r) {
       b.disabled = false;
       var j = r.json || {};
       if (!r.ok || j.ok === false) {
         el.className = 'out bad';
-        el.textContent = 'не вышло: ' + (j.error || ('HTTP ' + r.status));
+        el.textContent = t('admin.err.fail', 'failed:') + ' ' + (j.error || ('HTTP ' + r.status));
         return;
       }
       el.className = 'out good';
-      el.textContent = 'Создано: ' + j.name + ' · id ' + j.id + '\nпароль: ' + j.pass +
-        (j.generated ? ' (выдан сервером)' : '') + '\nЗапишите пароль сейчас — второй раз он не покажется.';
+      el.textContent = t('admin.created', 'Created:') + ' ' + j.name + ' · id ' + j.id + '\n' + t('admin.created.pass', 'password:') + ' ' + j.pass +
+        (j.generated ? ' (' + t('admin.created.by.server', 'made by the server') + ')' : '') + '\n' + t('admin.created.warn', 'Write the password down now — it will not be shown again.');
       $('cname').value = '';
       $('cpass').value = '';
       $('crole').value = 'user';
       loadPeople();
     })
-    .catch(function () { b.disabled = false; el.className = 'out bad'; el.textContent = 'связь оборвалась'; });
+    .catch(function () { b.disabled = false; el.className = 'out bad'; el.textContent = t("chat.err.conn.drop", "connection dropped"); });
 };
 
 function renderPeople() {
@@ -665,7 +666,7 @@ function renderPeople() {
     el.innerHTML = '<span class="dot' + (u.online ? ' on' : '') + '"></span>' +
       '<div class="nm">' + esc(u.name) + '<small>' + (u.id || '—') + ' · ' + esc(ago(u.keySeen || u.seen)) + '</small></div>' +
       (u.role === 'admin' ? '<span class="rl">админ</span>' : '') +
-      '<span class="id">' + (u.chats || 0) + ' чатов</span>';
+      '<span class="id">' + (u.chats || 0) + ' ' + t('admin.chats', 'chats') + '</span>';
     el.onclick = function () { pick(u); };
     box.appendChild(el);
   });
@@ -675,16 +676,16 @@ function pick(u) {
   cur = u;
   renderPeople();
   $('person').style.display = 'block';
-  $('pname').textContent = u.name + (u.role === 'admin' ? ' · админ' : '');
-  $('pmeta').textContent = 'id ' + (u.id || '—') + ' · на связи: ' + (u.online ? 'да' : 'нет') +
-    ' · вход: ' + ago(u.keySeen || u.seen) + ' · сессий: ' + (u.sess || 0) +
-    (u.pass ? '' : ' · пароля нет');
+  $('pname').textContent = u.name + (u.role === 'admin' ? ' ' + t('admin.dot.admin', '· admin') : '');
+  $('pmeta').textContent = 'id ' + (u.id || '—') + ' ' + t('admin.online.n', '· online:') + ' ' + (u.online ? t("admin.yes", "yes") : t("admin.no", "no")) +
+    ' ' + t('admin.last.in', '· last sign-in:') + ' ' + ago(u.keySeen || u.seen) + ' ' + t('admin.sessions', '· sessions:') + ' ' + (u.sess || 0) +
+    (u.pass ? '' : ' ' + t('admin.no.pass', '· no password'));
   $('iname').value = u.name;
   $('ipass').value = '';
   $('passout').textContent = '';
   $('qr').style.display = 'none';
-  $('pinfo').textContent = 'диалогов: ' + (u.chats || 0) + ' · пароль задан: ' + (u.passSet || 'нет') +
-    ' · последний ключ: ' + (u.keySeen || 'нет');
+  $('pinfo').textContent = t('admin.dialogs', 'dialogs:') + ' ' + (u.chats || 0) + ' ' + t('admin.pass.set', '· password set:') + ' ' + (u.passSet || t("admin.no", "no")) +
+    ' ' + t('admin.last.key', '· last key:') + ' ' + (u.keySeen || t("admin.no", "no"));
   $('badmin').disabled = u.role === 'admin';
   $('buser').disabled = u.role !== 'admin';
   $('bact').disabled = false;
@@ -705,13 +706,13 @@ function userAction(action, value, okText) {
 
 $('brename').onclick = function () {
   var v = $('iname').value.trim();
-  if (!v) { $('pinfo').textContent = 'имя не может быть пустым'; return; }
+  if (!v) { $('pinfo').textContent = t("admin.err.name.empty", "the name cannot be empty"); return; }
   userAction('rename', v).then(function (j) {
     cur.name = j.name; cur.id = j.id;
     $('pname').textContent = cur.name;
-    $('pinfo').textContent = 'имя изменено — диалоги и картинки перенесены вместе с человеком';
+    $('pinfo').textContent = t("admin.name.done", "name changed — dialogs and pictures moved with the person");
     loadPeople();
-  }).catch(function (e) { $('pinfo').textContent = 'не вышло: ' + e.message; });
+  }).catch(function (e) { $('pinfo').textContent = t('admin.err.fail', 'failed:') + ' ' + e.message; });
 };
 
 $('bpass').onclick = function () {
@@ -720,28 +721,28 @@ $('bpass').onclick = function () {
   $('passout').textContent = '…';
   userAction('pass', v).then(function (j) {
     $('passout').className = 'out good';
-    $('passout').textContent = 'Новый пароль: ' + j.pass + (j.generated ? ' (выдан сервером)' : '') +
-      '\nВсе сеансы этого человека закрыты — входит заново.';
+    $('passout').textContent = t('admin.new.pass', 'New password:') + ' ' + j.pass + (j.generated ? ' (' + t('admin.created.by.server', 'made by the server') + ')' : '') +
+      '\n' + t('admin.kick.done', 'All sessions of this person are closed — they will sign in again.');
     $('ipass').value = '';
     loadPeople();
-  }).catch(function (e) { $('passout').className = 'out bad'; $('passout').textContent = 'не вышло: ' + e.message; });
+  }).catch(function (e) { $('passout').className = 'out bad'; $('passout').textContent = t('admin.err.fail', 'failed:') + ' ' + e.message; });
 };
 
 $('badmin').onclick = function () {
   userAction('role', 'admin').then(function () { cur.role = 'admin'; pick(cur); loadPeople(); })
-    .catch(function (e) { $('pinfo').textContent = 'не вышло: ' + e.message; });
+    .catch(function (e) { $('pinfo').textContent = t('admin.err.fail', 'failed:') + ' ' + e.message; });
 };
 $('buser').onclick = function () {
   userAction('role', 'user').then(function () { cur.role = 'user'; pick(cur); loadPeople(); })
-    .catch(function (e) { $('pinfo').textContent = 'не вышло: ' + e.message; });
+    .catch(function (e) { $('pinfo').textContent = t('admin.err.fail', 'failed:') + ' ' + e.message; });
 };
 
 $('bkick').onclick = function () {
-  if (!confirm('Закрыть все входы «' + cur.name + '» и выбросить его с устройств?')) return;
+  if (!confirm(t("admin.kick.confirm1", "Close all sign-ins of “") + cur.name + t("admin.kick.confirm2", "” and kick them off their devices?"))) return;
   userAction('kick').then(function (j) {
-    $('pinfo').textContent = 'выкинут: закрыто сеансов ' + j.kicked;
+    $('pinfo').textContent = t('admin.kicked', 'kicked: sessions closed') + ' ' + j.kicked;
     loadPeople();
-  }).catch(function (e) { $('pinfo').textContent = 'не вышло: ' + e.message; });
+  }).catch(function (e) { $('pinfo').textContent = t('admin.err.fail', 'failed:') + ' ' + e.message; });
 };
 
 $('blink').onclick = function () {
@@ -755,7 +756,7 @@ $('blink').onclick = function () {
     var b = $('cpy');
     if (b) b.onclick = function () {
       if (navigator.clipboard) navigator.clipboard.writeText(j.url);
-      b.textContent = 'скопировано';
+      b.textContent = t("admin.copied", "copied");
     };
   }).catch(function (e) { $('qr').innerHTML = '<div class="out bad">не вышло: ' + esc(e.message) + '</div>'; });
 };
@@ -763,7 +764,7 @@ $('blink').onclick = function () {
 $('bact').onclick = function () {
   post('/__adm/act', { user: cur.id }, 15000).then(function (r) {
     var j = r.json || {};
-    if (!r.ok || j.ok === false) { $('pinfo').textContent = 'не вышло: ' + (j.error || r.status); return; }
+    if (!r.ok || j.ok === false) { $('pinfo').textContent = t('admin.err.fail', 'failed:') + ' ' + (j.error || r.status); return; }
     location.href = 'index.html';
   });
 };
