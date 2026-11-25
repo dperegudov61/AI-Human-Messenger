@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#111417">
-<script src="theme.js" data-i18n="strings.tsv"></script>
+<script src="/ui/ui.js" data-i18n="strings.tsv"></script>
 <title data-i18n="chat.title">AI &amp; Human · chat</title>
 <style>
 /* ---------- палитра: тёмная (по умолчанию) и светлая ----------
    Все цвета страницы берутся только отсюда; тему переключает атрибут
-   data-theme на <html> (его ставит theme.js рядом с этим файлом).
+   data-theme на <html> (его ставит общий шаблон /ui/ui.js).
    Значения подобраны парами: один смысл — один уровень темноты. */
 :root{
   color-scheme:dark;
@@ -83,7 +83,7 @@ a{color:var(--lnk)}
 @media (hover:none){ .it .del{display:block;color:var(--tx4)} }
 
 #me{margin-top:auto;border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--tx3);font-size:13px;min-height:52px}
-#me .ui-sw{flex:1 1 100%}
+#me .uibar{flex:1 1 100%}
 #me .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #me button{background:var(--raise);border:1px solid var(--line2);color:var(--tx3);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:12px}
 #actb{display:none;align-items:center;gap:8px;padding:6px 10px;background:var(--warnBg);color:var(--warnTx);font-size:12.5px;border-bottom:1px solid var(--warnLine)}
@@ -191,8 +191,8 @@ header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1
     <div class="bd" id="pmList"></div>
   </div>
 
-  <div id="me"><span class="nm" id="mename">…</span><button id="acct" type="button" data-i18n="chat.account">account</button>
-    <span class="ui-sw" data-ui="switch"></span></div>
+  <!-- шапка шаблона: логотип, тема, язык, аккаунт (рисует /ui/ui.js) -->
+  <div id="me"><div class="uibar" data-ui="bar"></div></div>
 </aside>
 
 <main>
@@ -973,6 +973,7 @@ function findLive() {
 function net(on, text) {
   $('ndot').className = 'dot' + (on ? ' on' : '');
   $('ntext').textContent = text;
+  if (window.UI) UI.online(!!on);   // точка у кнопки аккаунта в шапке шаблона
 }
 
 // ---------- вход ----------
@@ -1088,10 +1089,8 @@ function start() {
 
 // «Сергей (Дима Администратор)» — кто на самом деле держит сессию
 function showMe() {
-  var nm = actName || me;
-  $('mename').textContent = (actName && realMe && actName !== realMe)
-    ? actName + ' (' + realMe + ', ' + t('chat.act.admin', 'admin') + ')'
-    : nm;
+  // имя в кнопке аккаунта рисует общий шаблон (/ui/ui.js) по door.user в localStorage
+  if (window.UI) UI.refresh();
   if (actName && actName !== realMe) {
     $('actb').className = 'on';
     $('actt').textContent = t("chat.act.as", "you are acting as “") + actName + '»';
@@ -1968,7 +1967,6 @@ function removeChat(d) {
 
 // ---------- мелочи ----------
 function renderManage() {
-  $('acct').onclick = function () { location.href = GH + '/account/'; };
   $('actback').onclick = function () {
     post('/__adm/act', { user: '' }, 10000).then(function () {
       actName = ''; showMe(); refreshDialogs();
