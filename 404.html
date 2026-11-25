@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#111417">
-<script src="theme.js"></script>
-<title>AI &amp; Human · чат</title>
+<script src="theme.js" data-i18n="strings.tsv"></script>
+<title data-i18n="chat.title">AI &amp; Human · chat</title>
 <style>
 /* ---------- палитра: тёмная (по умолчанию) и светлая ----------
    Все цвета страницы берутся только отсюда; тему переключает атрибут
@@ -178,45 +178,45 @@ header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1
 <body>
 
 <aside id="side">
-  <div class="brand">AI &amp; Human<small>мессенджер</small></div>
-  <div id="net"><span class="dot" id="ndot"></span><span id="ntext">ищу сервер…</span></div>
+  <div class="brand">AI &amp; Human<small data-i18n="chat.brand.sub">messenger</small></div>
+  <div id="net"><span class="dot" id="ndot"></span><span id="ntext" data-i18n="chat.net.searching">looking for server…</span></div>
 
   <div class="acc" id="aiAcc">
-    <div class="hd"><span class="tw">▾</span><span class="nm">ИИ чаты</span><button type="button" id="newAI" title="новый чат с ботом">＋</button></div>
+    <div class="hd"><span class="tw">▾</span><span class="nm" data-i18n="chat.ai.chats">AI chats</span><button type="button" id="newAI" title="new chat with a bot" data-i18n-title="chat.ai.new.title">＋</button></div>
     <div class="bd" id="aiList"></div>
   </div>
 
   <div class="acc" id="pmAcc">
-    <div class="hd"><span class="tw">▾</span><span class="nm">Люди</span><button type="button" id="newPM" title="новый диалог с человеком">＋</button></div>
+    <div class="hd"><span class="tw">▾</span><span class="nm" data-i18n="chat.people">People</span><button type="button" id="newPM" title="new dialog with a person" data-i18n-title="chat.people.new.title">＋</button></div>
     <div class="bd" id="pmList"></div>
   </div>
 
-  <div id="me"><span class="nm" id="mename">…</span><button id="acct" type="button">аккаунт</button>
+  <div id="me"><span class="nm" id="mename">…</span><button id="acct" type="button" data-i18n="chat.account">account</button>
     <span class="ui-sw" data-ui="switch"></span></div>
 </aside>
 
 <main>
-  <div id="actb"><span id="actt"></span><button type="button" id="actback">вернуться к себе</button></div>
+  <div id="actb"><span id="actt"></span><button type="button" id="actback" data-i18n="chat.act.back">back to myself</button></div>
   <header>
-    <button id="menu" type="button" aria-label="меню">☰</button>
-    <div id="title">выберите переписку</div>
+    <button id="menu" type="button" aria-label="menu" data-i18n-aria="chat.menu">☰</button>
+    <div id="title" data-i18n="chat.pick.chat">pick a conversation</div>
     <div id="hint"></div>
-    <button id="cfg" type="button" aria-label="настройки бота" title="настройки бота" disabled>⚙</button>
+    <button id="cfg" type="button" aria-label="bot settings" data-i18n-aria="chat.cfg.title" title="bot settings" data-i18n-title="chat.cfg.title" disabled>⚙</button>
   </header>
   <div id="log"></div>
-  <div id="typing">ИИ думает…</div>
+  <div id="typing" data-i18n="chat.typing">AI is thinking…</div>
   <form id="form" autocomplete="off">
-    <label id="clip" title="Прикрепить картинку">＋<input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden></label>
-    <textarea id="text" rows="1" placeholder="Сообщение…"></textarea>
-    <button id="send" type="submit" aria-label="отправить">➤</button>
+    <label id="clip" title="Attach a picture" data-i18n-title="chat.attach">＋<input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden></label>
+    <textarea id="text" rows="1" placeholder="Message…" data-i18n-ph="chat.ph.message"></textarea>
+    <button id="send" type="submit" aria-label="send" data-i18n-aria="chat.send">➤</button>
   </form>
 </main>
 
 <div id="login"><div class="box">
-  <h1 id="lht">Нужен вход</h1>
-  <p id="lmsg">Страница чата живёт на GitHub, а переписка — на вашем домашнем ПК.</p>
-  <a class="btn" id="lgo" href="/accounts/">Войти</a>
-  <button class="retry" id="lretry" type="button">Проверить связь ещё раз</button>
+  <h1 id="lht" data-i18n="chat.login.need">Sign in needed</h1>
+  <p id="lmsg" data-i18n="chat.login.sub">The chat page lives on GitHub, the conversation lives on your home PC.</p>
+  <a class="btn" id="lgo" href="/accounts/" data-i18n="chat.login.go">Sign in</a>
+  <button class="retry" id="lretry" type="button" data-i18n="chat.login.retry">Check the connection again</button>
 </div></div>
 
 <div id="modal"><div class="sheet" id="sheet"></div></div>
@@ -475,7 +475,7 @@ function syncChat(chatId) {
     syncBusy[chatId] = false;
     var j = (r && r.json) || {};
     if (!r || !r.ok || !j.id) {
-      if (r && (r.status === 403 || r.status === 404)) toast(j.error || 'нет доступа к переписке');
+      if (r && (r.status === 403 || r.status === 404)) toast(j.error || t("chat.err.noview", "no access to this conversation"));
       return;
     }
     return applySync(chatId, j);
@@ -776,7 +776,7 @@ function showProgress(fid, pct) {
 function showDenied(fid) {
   saveImagesOff(fid);
   var waits = document.querySelectorAll('[data-fwait="' + fid + '"]');
-  for (var j = 0; j < waits.length; j++) waits[j].textContent = 'файл недоступен';
+  for (var j = 0; j < waits.length; j++) waits[j].textContent = t("chat.err.file", "file unavailable");
 }
 function saveImagesOff(fid) {
   var imgs = document.querySelectorAll('img[data-fid="' + fid + '"]');
@@ -977,8 +977,8 @@ function net(on, text) {
 
 // ---------- вход ----------
 function showLogin(title, msg) {
-  $('lht').textContent = title || 'Нужен вход';
-  $('lmsg').textContent = msg || 'Страница чата живёт на GitHub, а переписка — на вашем домашнем ПК.';
+  $('lht').textContent = title || t("chat.login.need", "Sign in needed");
+  $('lmsg').textContent = msg || t("chat.login.sub", "The chat page lives on GitHub, the conversation lives on your home PC.");
   $('lgo').href = GH + '/accounts/?next=' + encodeURIComponent(PAGEURL);
   $('login').className = 'on';
 }
@@ -1014,21 +1014,21 @@ function takeKeyFromPath() {
 function boot(retry) {
   retry = retry || 0;
   clearTimeout(bootT);
-  net(false, 'ищу сервер…');
+  net(false, t("chat.net.searching", "looking for server…"));
   takeKeyFromPath();
   var local = /^(127\.0\.0\.1|localhost)$/i.test(location.hostname);
   var ready = local ? Promise.resolve(location.origin) : findLive();
   ready.then(function (url) {
     if (!url) {
-      net(false, 'сервер не отвечает');
-      showLogin('Сервер не на связи', 'Включите ПК (окно «2. Сервер») — страница сама найдёт новый адрес моста.');
+      net(false, t("chat.net.down", "server is not responding"));
+      showLogin(t("chat.err.offline", "Server is not online"), t("chat.err.offline.hint", "Turn on the PC («2. Server» window) — the page will find the new bridge address itself."));
       // пробуем сами, пока не найдём: 2,5 → 15 с (без кнопок и перезагрузок)
       bootT = setTimeout(function () { boot(retry + 1); }, Math.min(15000, 2500 * Math.pow(1.4, Math.min(retry, 8))));
       return;
     }
     base = url.replace(/\/+$/, '');
     if (!local) lss(URLKEY, base);
-    net(true, 'сервер на связи');
+    net(true, t("chat.net.up", "server is online"));
     tok = takeTokenFromUrl() || ls(TOK);
     return verify().then(function (ok) {
       if (ok) { hideLogin(); return start(); }
@@ -1040,18 +1040,18 @@ function boot(retry) {
           tok = j.token; lss(TOK, tok);
           return verify().then(function (ok2) {
             if (ok2) { hideLogin(); start(); }
-            else showLogin('Вход больше не действует', 'Ключ этого устройства не принят — войдите заново.');
+            else showLogin(t("chat.err.keydead", "Sign-in no longer works"), t("chat.err.keydead.hint", "The key of this device was not accepted — sign in again."));
           });
         }
         // Мост мог сменить адрес посреди работы: связь оборвалась — ключ НЕ стираем,
         // а ищем сервер заново. Ключ гасим только при явном отказе (401/403).
         if (r.status === 0) {
-          showLogin('Связь оборвалась', 'Страница ищет новый адрес моста — подождите пару секунд или нажмите «Проверить связь ещё раз».');
+          showLogin(t("chat.err.link", "Connection dropped"), t("chat.err.link.hint", "The page is looking for a new bridge address — wait a couple of seconds or press “Check the connection again”."));
           if (retry < 1) setTimeout(function () { boot(retry + 1); }, 2500);
           return;
         }
         lsd('door.key');
-        showLogin('Вход больше не действует', 'Ключ этого устройства не принят — войдите заново.');
+        showLogin(t("chat.err.keydead", "Sign-in no longer works"), t("chat.err.keydead.hint", "The key of this device was not accepted — sign in again."));
       });
     });
   });
@@ -1090,11 +1090,11 @@ function start() {
 function showMe() {
   var nm = actName || me;
   $('mename').textContent = (actName && realMe && actName !== realMe)
-    ? actName + ' (' + realMe + ' Администратор)'
+    ? actName + ' (' + realMe + ', ' + t('chat.act.admin', 'admin') + ')'
     : nm;
   if (actName && actName !== realMe) {
     $('actb').className = 'on';
-    $('actt').textContent = 'вы действуете от имени «' + actName + '»';
+    $('actt').textContent = t("chat.act.as", "you are acting as “") + actName + '»';
   } else {
     $('actb').className = '';
   }
@@ -1122,7 +1122,7 @@ function refreshDialogs() {
         for (var i = 0; i < dialogs.length; i++) if (dialogs[i].id === cur.id) { d = dialogs[i]; break; }
         if (!d) {
           cur = null; curData = null; lastCount = -1;
-          $('log').innerHTML = ''; $('title').textContent = 'выберите переписку';
+          $('log').innerHTML = ''; $('title').textContent = t("chat.pick.chat", "pick a conversation");
         } else {
           cur = d;
           if (d.title) $('title').textContent = titleOf(d);
@@ -1151,23 +1151,23 @@ function iconOf(d) {
   return d.model ? '💬' : '·';
 }
 function titleOf(d) {
-  if (d.shared) return 'Общий чат';
-  if (d.title && d.title !== 'Новый чат' && d.title !== 'без названия') return d.title;
-  if (d.kind === 'pm') return d.peer || 'личная переписка';
-  return d.title || 'Новый чат';
+  if (d.shared) return t("chat.common", "General chat");
+  if (d.title && d.title !== t("chat.new.chat", "New chat") && d.title !== t("chat.untitled", "untitled")) return d.title;
+  if (d.kind === 'pm') return d.peer || t("chat.pm", "personal conversation");
+  return d.title || t("chat.new.chat", "New chat");
 }
 function subOf(d) {
   var bits = [];
-  if (d.shared) bits.push('общий чат');
-  else if (d.kind === 'pm') bits.push('личная переписка');
-  else bits.push(d.model || 'ИИ');
-  if (d.count) bits.push(d.count + ' сообщ.');
+  if (d.shared) bits.push(t("chat.common.low", "general chat"));
+  else if (d.kind === 'pm') bits.push(t("chat.pm", "personal conversation"));
+  else bits.push(d.model || t("chat.ai", "AI"));
+  if (d.count) bits.push(d.count + ' ' + t('chat.msgs', 'msgs'));
   return bits.join(' · ');
 }
 
 function renderAll() {
-  renderList('aiList', dialogs.filter(isAiChat), 'пока нет чатов с ИИ — нажмите ＋');
-  renderList('pmList', dialogs.filter(isPm), 'пока нет людей — нажмите ＋');
+  renderList('aiList', dialogs.filter(isAiChat), t("chat.no.ai", "no AI chats yet — press ＋"));
+  renderList('pmList', dialogs.filter(isPm), t("chat.no.people", "no people yet — press ＋"));
 }
 
 function renderList(boxId, list, empty) {
@@ -1178,7 +1178,7 @@ function renderList(boxId, list, empty) {
     el.className = 'it' + (cur && cur.id === d.id ? ' on' : '');
     el.innerHTML = '<span class="ic">' + iconOf(d) + '</span><span class="tt">' + esc(titleOf(d)) +
       '<div class="sub">' + esc(subOf(d)) + '</div></span>' +
-      (d.shared ? '' : '<button class="del" type="button" title="удалить">✕</button>');
+      (d.shared ? '' : '<button class="del" type="button" title=t("chat.delete", "delete")>✕</button>');
     el.onclick = function () { open(d); };
     var del = el.querySelector('.del');
     if (del) del.onclick = function (ev) { ev.stopPropagation(); removeChat(d); };
@@ -1227,7 +1227,7 @@ function open(d) {
   lastCount = -1; localPos = 0;
   try { lss(LAST_CHAT, d.id); } catch (e) {}
   $('title').textContent = titleOf(d);
-  $('hint').textContent = d.kind === 'pm' ? 'личная переписка' : d.shared ? 'общий чат' : (d.model || '');
+  $('hint').textContent = d.kind === 'pm' ? t("chat.pm", "personal conversation") : d.shared ? t("chat.common.low", "general chat") : (d.model || '');
   if (window.innerWidth <= 820) $('side').className = 'hide';
   renderAll();
   $('log').innerHTML = '';
@@ -1259,7 +1259,7 @@ function msgEl(m) {
   var el = document.createElement('div');
   if (m.deleted) {
     el.className = 'm gone';
-    el.textContent = 'сообщение удалено';
+    el.textContent = t("chat.msg.deleted", "message deleted");
     if (m.id) el.setAttribute('data-mid', m.id);
     return el;
   }
@@ -1268,7 +1268,7 @@ function msgEl(m) {
   if (m.state === 'sending') el.className += ' pend';
   if (m.state === 'error') {
     el.className += ' err';
-    el.title = 'не отправлено — нажмите, чтобы повторить';
+    el.title = t("chat.msg.failed", "not sent — press to retry");
     el.onclick = function () { retryMsg(m); };
   }
   if (m.id) el.setAttribute('data-mid', m.id);
@@ -1292,7 +1292,7 @@ function msgEl(m) {
     wrap.className = 'mimg';
     var im = document.createElement('img');
     im.loading = 'lazy';
-    im.alt = 'картинка';
+    im.alt = t("chat.picture", "picture");
     im.setAttribute('data-fid', m.image);
     if (fileUrls[m.image]) im.src = fileUrls[m.image];
     else if (m.link) im.src = imageSrc(m.link, true);   // progressive: браузер рисует по мере прихода
@@ -1310,7 +1310,7 @@ function msgEl(m) {
     // оригинал — линейкой: изначальное название сохраняется в паспорте файла
     var dl = document.createElement('a');
     dl.className = 'dl';
-    dl.title = 'скачать оригинал (как загружено)';
+    dl.title = t("chat.dl.original", "download original (as uploaded)");
     dl.textContent = '⬇';
     dl.href = fileDownload(m.link);
     dl.setAttribute('download', '');
@@ -1318,14 +1318,14 @@ function msgEl(m) {
     var b = document.createElement('button');
     b.type = 'button';
     b.className = 'shr';
-    b.title = 'поделиться картинкой';
+    b.title = t("chat.share.pic", "share the picture");
     b.textContent = '🔗';
     b.onclick = function () { shareImage(m.link); };
     wrap.appendChild(b);
     var wait = document.createElement('div');
     wait.className = 'fwait';
     wait.setAttribute('data-fwait', m.image);
-    wait.textContent = fileUrls[m.image] ? '' : 'кэш…';
+    wait.textContent = fileUrls[m.image] ? '' : t("chat.cache.dots", "cache…");
     wrap.appendChild(wait);
     el.appendChild(wrap);
     prepFile(m.image);
@@ -1362,7 +1362,7 @@ function send() {
   if (!q || !cur || busy) return;
   textEl.value = '';
   if (isAiDialog()) return sendAi(q);
-  setBusy(true, 'отправляю…');
+  setBusy(true, t("chat.sending", "sending…"));
   var cid = newCid();
   var mid = newMid();
   var pos = localPos;
@@ -1399,7 +1399,7 @@ function markMsgState(chatId, mid, state) {
 
 function retryMsg(m) {
   if (!cur || !m || !m.id) return;
-  setBusy(true, 'отправляю…');
+  setBusy(true, t("chat.sending", "sending…"));
   markMsgState(cur.id, m.id, 'sending');
   deliver(cur.id, m.content, newCid(), m.id, 0);
 }
@@ -1407,10 +1407,10 @@ function retryMsg(m) {
 // удаление: на сервере остаётся tombstone, у всех на его месте — «сообщение удалено»
 function askDelete(m) {
   if (!cur || !m || !m.id) return;
-  if (!confirm('Удалить сообщение? На его месте останется «сообщение удалено».')) return;
+  if (!confirm(t("chat.del.confirm", "Delete the message? “message deleted” will stay in its place."))) return;
   post('/__msg/delete', { id: cur.id, mid: m.id }, 15000).then(function (r) {
     var j = r.json || {};
-    if (!r.ok || j.ok === false) { toast(j.error || 'не удалилось'); return; }
+    if (!r.ok || j.ok === false) { toast(j.error || t("chat.err.delfail", "not deleted")); return; }
     onPushDel({ c: cur.id, d: m.id, n: (lastCount > 0 ? lastCount : 1) });
   });
 }
@@ -1430,13 +1430,13 @@ function deliver(id, text, cid, mid, tryN) {
     }
     setBusy(false);
     markMsgState(id, mid, 'error');
-    toast(j.error || (r.status ? 'не отправилось (HTTP ' + r.status + ')' :
-      'нет связи — нажмите на сообщение, чтобы повторить'));
+    toast(j.error || (r.status ? t('chat.err.sendfail', 'not sent (HTTP ') + r.status + ')' :
+      t("chat.err.offline.tap", "no connection — tap the message to retry")));
   });
 }
 
 function sendAi(q) {
-  setBusy(true, 'ИИ думает…');
+  setBusy(true, t("chat.typing", "AI is thinking…"));
   var d = curData || {};
   var msgs = [], allHist = [];
   if (d.systemPrompt) msgs.push({ role: 'system', content: d.systemPrompt });
@@ -1457,16 +1457,16 @@ function sendAi(q) {
     var j = r.json || {};
     var acc = '';
     try { acc = j.choices[0].message.content || ''; } catch (e) {}
-    if (r.status === 503) throw new Error('модель сейчас загружается — попробуйте через полминуты');
-    if (!r.ok || !acc) throw new Error((j.error && (j.error.message || j.error)) || ('ответа нет (HTTP ' + r.status + ')'));
+    if (r.status === 503) throw new Error(t("chat.err.loading", "the model is loading now — try again in half a minute"));
+    if (!r.ok || !acc) throw new Error((j.error && (j.error.message || j.error)) || (t('chat.err.noanswer', 'no answer (HTTP ') + r.status + ')'));
     var hist = allHist.concat([{ role: 'user', content: q }, { role: 'assistant', content: acc }]);
     return post('/__log', { id: cur.id, user: q, assistant: acc, messages: hist }, 30000).then(function () { loadDialog(); });
   }).catch(function (e) {
-    net(false, 'связь оборвалась');
+    net(false, t("chat.err.conn.drop", "connection dropped"));
     setBusy(false);
     $('text').value = q;
-    toast('Не получилось: ' + (e && e.message ? e.message : e));
-    setTimeout(function () { net(true, 'сервер на связи'); loadDialog(); }, 2500);
+    toast(t('chat.err.prefix', 'Failed: ') + (e && e.message ? e.message : e));
+    setTimeout(function () { net(true, t("chat.net.up", "server is online")); loadDialog(); }, 2500);
   }).then(function () { setBusy(false); });
 }
 
@@ -1476,12 +1476,12 @@ function shareImage(link) {
   if (!id) return;
   post('/__img/share', { id: id }, 15000).then(function (r) {
     var j = r.json || {};
-    if (!r.ok || !j.ok) { toast(j.error || 'не получилось'); return; }
+    if (!r.ok || !j.ok) { toast(j.error || t("chat.err.failed", "failed")); return; }
     var full = base + j.path;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(full).then(function () { toast('ключ-ссылка скопирована'); },
-        function () { toast('ссылка: ' + full); });
-    } else toast('ссылка: ' + full);
+      navigator.clipboard.writeText(full).then(function () { toast(t("chat.copy.done", "link key copied")); },
+        function () { toast(t('chat.link.prefix', 'link: ') + full); });
+    } else toast(t('chat.link.prefix', 'link: ') + full);
   });
 }
 
@@ -1499,8 +1499,8 @@ function sha256hex(buf) {
 
 function upload(file) {
   if (!file || !cur) return;
-  if (file.size > 24 * 1024 * 1024) { toast('Файл больше 24 МБ'); return; }
-  setBusy(true, 'считаю хеш…');
+  if (file.size > 24 * 1024 * 1024) { toast(t("chat.err.bigfile", "File is larger than 24 MB")); return; }
+  setBusy(true, t("chat.hash.count", "counting the hash…"));
   var reader = new FileReader();
   reader.onload = function () {
     sha256hex(reader.result).then(function (sha) {
@@ -1511,8 +1511,8 @@ function upload(file) {
         if (r.ok && j.exists && j.file && j.file.id) {
           post('/__file/link', { file: j.file.id, chat: cur.id }, 15000).then(function (r2) {
             setBusy(false);
-            if (!r2.ok) { toast((r2.json || {}).error || 'не получилось показать файл'); return; }
-            toast('такой файл уже был — показан без загрузки');
+            if (!r2.ok) { toast((r2.json || {}).error || t("chat.err.showfile", "failed to show the file")); return; }
+            toast(t("chat.file.dup", "that file was already here — shown without upload"));
             loadDialog();
           });
           return;
@@ -1521,7 +1521,7 @@ function upload(file) {
       }).catch(function () { sendFile(file, sha); });
     });
   };
-  reader.onerror = function () { setBusy(false); toast('не смог прочитать файл'); };
+  reader.onerror = function () { setBusy(false); toast(t("chat.err.readfile", "could not read the file")); };
   reader.readAsArrayBuffer(file);
 }
 
@@ -1536,18 +1536,18 @@ function sendFile(file, sha) {
   xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
   xhr.upload.onprogress = function (e) {
     if (e.lengthComputable && e.total > 0)
-      setBusy(true, 'загружаю ' + Math.round(100 * e.loaded / e.total) + '%');
+      setBusy(true, t('chat.uploading', 'uploading ') + Math.round(100 * e.loaded / e.total) + '%');
   };
   xhr.onload = function () {
     setBusy(false);
     var j = {};
     try { j = JSON.parse(xhr.responseText || '{}'); } catch (e) {}
-    if (xhr.status !== 200) { toast(j.error || 'не загрузилось'); return; }
-    if (j.dup) toast('такой файл уже был — показан готовый');
+    if (xhr.status !== 200) { toast(j.error || t("chat.err.upload", "upload failed")); return; }
+    if (j.dup) toast(t("chat.file.dup2", "that file was already here — the ready one is shown"));
     loadDialog();
   };
-  xhr.onerror = function () { setBusy(false); toast('нет связи'); };
-  setBusy(true, 'загружаю…');
+  xhr.onerror = function () { setBusy(false); toast(t("chat.noconn", "no connection")); };
+  setBusy(true, t("chat.uploading2", "uploading…"));
   xhr.send(file);
 }
 
@@ -1576,7 +1576,7 @@ function poll() {
     var j = r.json || {};
     if (r.status === 401 || r.status === 403) {
       lsd(TOK); tok = '';
-      showLogin('Вход больше не действует', 'Войдите заново — ключ или пароль устарели.');
+      showLogin(t("chat.err.keydead", "Sign-in no longer works"), t("chat.err.signin", "Sign in again — the key or password is outdated."));
       return;
     }
     var ok = r.ok && typeof j.seq === 'number';
@@ -1584,7 +1584,7 @@ function poll() {
     if (ok) {
       chDown = 0;
       chWait = 25;
-      net(true, 'сервер на связи');
+      net(true, t("chat.net.up", "server is online"));
       if (j.reset) resync();
       chSeq = j.seq;
       lss('ch.seq', String(chSeq));
@@ -1596,8 +1596,8 @@ function poll() {
       // если туннель рвёт долгие запросы — держим короче, чтобы не молотить вхолостую
       if (chDown >= 3 && chWait > 12) chWait = 12;
       // 404 = сервер старой сборки (в нём ещё нет /__events)
-      if (r.status === 404) net(false, 'сервер старой версии — перезапустите окно «1. Нейросети»');
-      else net(false, chDown > 2 ? 'связь оборвалась — ищу мост' : 'восстанавливаю связь…');
+      if (r.status === 404) net(false, t("chat.err.oldserver", "old server version — restart the “1. Neural networks” window"));
+      else net(false, chDown > 2 ? t("chat.err.conn.bridge", "connection dropped — looking for the bridge") : t("chat.reconnect", "restoring the connection…"));
       if (chDown === 2) refind();
       wait = Math.min(15000, 800 * Math.pow(2, Math.min(chDown, 4)));
     }
@@ -1659,7 +1659,7 @@ function refreshList() {
         for (var i = 0; i < dialogs.length; i++) if (dialogs[i].id === cur.id) { d = dialogs[i]; break; }
         if (!d) {
           cur = null; curData = null; lastCount = -1;
-          $('log').innerHTML = ''; $('title').textContent = 'выберите переписку';
+          $('log').innerHTML = ''; $('title').textContent = t("chat.pick.chat", "pick a conversation");
         } else cur = d;
       }
       renderAll();
@@ -1704,10 +1704,10 @@ function newAiChat() {
   function draw() {
     var body = $('mbody');
     body.innerHTML = '';
-    if (!models.length) { body.textContent = 'моделей не найдено'; return; }
+    if (!models.length) { body.textContent = t("chat.no.models", "no models found"); return; }
     body.appendChild(mlist(models.map(function (m) {
       return { value: m.id, html: '<span class="t">' + esc(m.name) + '<small>' +
-        (m.type === 'image' ? 'картинки' : 'текст') + ' · ' + esc(m.sizeText || '') + '</small></span>' };
+        (m.type === 'image' ? t("chat.pictures", "pictures") : t("chat.text", "text")) + ' · ' + esc(m.sizeText || '') + '</small></span>' };
     }), function (id) {
       chosenModel = id;
       var m = models.filter(function (x) { return x.id === id; })[0];
@@ -1733,7 +1733,7 @@ function newAiChat() {
       c.type = 'button';
       c.className = 'chip' + (p.id === chosenPreset ? ' on' : '');
       c.textContent = p.name;
-      c.title = p.width + '×' + p.height + ' · ' + p.steps + ' шагов';
+      c.title = p.width + '×' + p.height + ' · ' + p.steps + t('chat.steps.unit', ' steps');
       c.onclick = function () {
         chosenPreset = p.id;
         var all = box.querySelectorAll('.chip');
@@ -1752,13 +1752,13 @@ function newAiChat() {
     if (!chosenModel) return;
     var btn = this;
     btn.disabled = true;
-    btn.textContent = 'создаю…';
+    btn.textContent = t("chat.creating", "creating…");
     post('/__dialogs', { model: chosenModel, preset: chosenPreset }, 25000).then(function (r) {
       var j = r.json || {};
       if (!r.ok || !j.id) {
         btn.disabled = false;
-        btn.textContent = 'Создать';
-        toast(j.error || 'не получилось создать чат');
+        btn.textContent = t("chat.create", "Create");
+        toast(j.error || t("chat.err.create", "failed to create the chat"));
         return;
       }
       var d = { id: j.id, title: j.title, model: j.model, count: 0 };
@@ -1784,10 +1784,10 @@ function newPmChat() {
   loadPeople().then(function () {
     var body = $('mbody');
     body.innerHTML = '';
-    if (!people.length) { body.textContent = 'пока никого нет'; return; }
+    if (!people.length) { body.textContent = t("chat.no.people2", "nobody here yet"); return; }
     body.appendChild(mlist(people.map(function (p) {
       return { value: p.name, html: '<span class="dot' + (p.online ? ' on' : '') + '"></span>' +
-        '<span class="t">' + esc(p.name) + '<small>' + (p.online ? 'на связи' : 'не в сети') + '</small></span>' };
+        '<span class="t">' + esc(p.name) + '<small>' + (p.online ? t("chat.online", "online") : t("chat.offline", "offline")) + '</small></span>' };
     }), function (name) {
       chosen = name;
       $('mok').disabled = false;
@@ -1798,12 +1798,12 @@ function newPmChat() {
     if (!chosen) return;
     var btn = this;
     btn.disabled = true;
-    btn.textContent = 'открываю…';
+    btn.textContent = t("chat.opening", "opening…");
     post('/__pm/open', { user: chosen }, 15000).then(function (r) {
       var j = r.json || {};
       if (!r.ok || !j.ok) {
-        btn.disabled = false; btn.textContent = 'Открыть';
-        toast(j.error || 'не получилось открыть переписку');
+        btn.disabled = false; btn.textContent = t("chat.open", "Open");
+        toast(j.error || t("chat.err.open", "failed to open the conversation"));
         return;
       }
       var d = { id: j.id, title: j.title || chosen, kind: 'pm', peer: j.peer || chosen };
@@ -1817,9 +1817,9 @@ function newPmChat() {
 
 // ---------- настройки бота ----------
 var PRESETS = [
-  { id: 'draft', name: 'Черновик', w: 240, h: 320, steps: 6 },
-  { id: 'portrait', name: 'Портрет', w: 320, h: 480, steps: 10 },
-  { id: 'square', name: 'Квадрат', w: 384, h: 384, steps: 10 }
+  { id: 'draft', name: t("chat.draft", "Draft"), w: 240, h: 320, steps: 6 },
+  { id: 'portrait', name: t("chat.portrait", "Portrait"), w: 320, h: 480, steps: 10 },
+  { id: 'square', name: t("chat.square", "Square"), w: 384, h: 384, steps: 10 }
 ];
 var MIN_D = 144, MAX_D = 720, ASPECT_MIN = 0.25, ASPECT_MAX = 4;
 
@@ -1835,12 +1835,12 @@ function openCfg() {
   var sheet = $('sheet');
   $('modal').className = 'on';
   if (!isImg) {
-    sheet.innerHTML = '<h3>Настройки чата</h3>' +
+    sheet.innerHTML = '<h3>' + t('chat.settings.chat.title', 'Chat settings') + '</h3>' +
       '<p class="h">Это текстовая модель — размер картинки не нужен.</p>' +
-      '<div class="fld"><label>Температура <b id="tv">' + (curData.temperature || 0.7) + '</b></label>' +
+      '<div class="fld"><label>' + t('chat.temp', 'Temperature') + ' <b id="tv">' + (curData.temperature || 0.7) + '</b></label>' +
       '<input type="range" id="temp" min="0" max="2" step="0.1" value="' + (curData.temperature || 0.7) + '">' +
       '<div class="ends"><span>0 — строго</span><span>2 — свободно</span></div></div>' +
-      '<div class="fld"><label>Длина ответа <b id="mv">' + (curData.maxTokens || 512) + '</b></label>' +
+      '<div class="fld"><label>' + t('chat.len', 'Answer length') + ' <b id="mv">' + (curData.maxTokens || 512) + '</b></label>' +
       '<input type="range" id="mtok" min="64" max="4096" step="64" value="' + (curData.maxTokens || 512) + '">' +
       '<div class="ends"><span>64</span><span>4096</span></div></div>' +
       '<div id="sv"></div>' +
@@ -1859,16 +1859,16 @@ function openCfg() {
   if (ratio < ASPECT_MIN) ratio = ASPECT_MIN;
   if (ratio > ASPECT_MAX) ratio = ASPECT_MAX;
 
-  sheet.innerHTML = '<h3>Настройки бота</h3>' +
+  sheet.innerHTML = '<h3>' + t('chat.settings.bot.title', 'Bot settings') + '</h3>' +
     '<p class="h">Размер картинки. Тяните ползунок — вторая сторона подстраивается, чтобы кадр не стал слишком узким.</p>' +
     '<div class="chips" id="pchips"></div>' +
-    '<div class="fld"><label>Ширина <b id="wv">' + w + '</b></label>' +
+    '<div class="fld"><label>' + t('chat.width', 'Width') + ' <b id="wv">' + w + '</b></label>' +
     '<input type="range" id="sw" min="' + MIN_D + '" max="' + MAX_D + '" step="8" value="' + w + '">' +
     '<div class="ends"><span>' + MIN_D + '</span><span>' + MAX_D + '</span></div></div>' +
-    '<div class="fld"><label>Высота <b id="hv">' + h + '</b></label>' +
+    '<div class="fld"><label>' + t('chat.height', 'Height') + ' <b id="hv">' + h + '</b></label>' +
     '<input type="range" id="sh" min="' + MIN_D + '" max="' + MAX_D + '" step="8" value="' + h + '">' +
     '<div class="ends"><span>' + MIN_D + '</span><span>' + MAX_D + '</span></div></div>' +
-    '<div class="fld"><label>Шаги <b id="stv">' + (curData.imgSteps || 10) + '</b></label>' +
+    '<div class="fld"><label>' + t('chat.steps', 'Steps') + ' <b id="stv">' + (curData.imgSteps || 10) + '</b></label>' +
     '<input type="range" id="st" min="4" max="24" step="1" value="' + (curData.imgSteps || 10) + '">' +
     '<div class="ends"><span>4 — быстро</span><span>24 — качество</span></div></div>' +
     '<div id="sv"></div>' +
@@ -1930,36 +1930,36 @@ function saveCfg(extra) {
   var body = Object.assign({ id: cur.id }, extra);
   var btn = $('msave');
   var sv = $('sv');
-  if (btn) { btn.disabled = true; btn.textContent = 'сохраняю…'; }
-  if (sv) { sv.className = ''; sv.textContent = 'отправляю на сервер…'; }
+  if (btn) { btn.disabled = true; btn.textContent = t("chat.saving", "saving…"); }
+  if (sv) { sv.className = ''; sv.textContent = t("chat.sending.server", "sending to the server…"); }
   post('/__dialog/params', body, 20000).then(function (r) {
     var j = r.json || {};
     if (r.ok && j.ok !== false) {
-      if (sv) { sv.className = 'good'; sv.textContent = 'сохранено ✓ действует в этом чате'; }
-      if (btn) { btn.textContent = 'Сохранено'; }
+      if (sv) { sv.className = 'good'; sv.textContent = t("chat.saved.here", "saved ✓ applies in this chat"); }
+      if (btn) { btn.textContent = t("chat.saved", "Saved"); }
       return loadDialog().then(function () {
         setTimeout(function () { if ($('modal').className === 'on') { $('modal').className = ''; } }, 700);
       });
     }
-    if (btn) { btn.disabled = false; btn.textContent = 'Сохранить'; }
-    if (sv) { sv.className = 'bad'; sv.textContent = j.error || ('не сохранилось (HTTP ' + r.status + ')'); }
+    if (btn) { btn.disabled = false; btn.textContent = t("chat.save", "Save"); }
+    if (sv) { sv.className = 'bad'; sv.textContent = j.error || (t('chat.err.save', 'not saved (HTTP ') + r.status + ')'); }
   }).catch(function () {
-    if (btn) { btn.disabled = false; btn.textContent = 'Сохранить'; }
-    if (sv) { sv.className = 'bad'; sv.textContent = 'связь оборвалась — попробуйте ещё раз'; }
+    if (btn) { btn.disabled = false; btn.textContent = t("chat.save", "Save"); }
+    if (sv) { sv.className = 'bad'; sv.textContent = t("chat.err.conn.try", "connection dropped — try again"); }
   });
 }
 
 // ---------- удаление чата ----------
 function removeChat(d) {
-  if (!confirm('Удалить «' + d.title + '»? Файл уедет в data\\trash на сервере.')) return;
+  if (!confirm(t('chat.del.file1', 'Delete “') + d.title + t('chat.del.file2', '”? The file goes to data\\trash on the server.'))) return;
   post('/__dialog/delete', { id: d.id }, 15000).then(function (r) {
     var j = r.json || {};
-    if (!r.ok || j.ok === false) { toast(j.error || 'не удалось удалить'); return; }
-    toast('удалено');
+    if (!r.ok || j.ok === false) { toast(j.error || t("chat.err.delfile", "could not delete")); return; }
+    toast(t("chat.deleted", "deleted"));
     if (cur && cur.id === d.id) {
       cur = null; curData = null;
       $('log').innerHTML = '';
-      $('title').textContent = 'выберите переписку';
+      $('title').textContent = t("chat.pick.chat", "pick a conversation");
       $('cfg').disabled = true;
     }
     refreshDialogs();
@@ -1972,7 +1972,7 @@ function renderManage() {
   $('actback').onclick = function () {
     post('/__adm/act', { user: '' }, 10000).then(function () {
       actName = ''; showMe(); refreshDialogs();
-      toast('вы снова работаете от своего имени');
+      toast(t("chat.act.back.done", "you act as yourself again"));
     });
   };
   $('menu').onclick = function () { $('side').classList.toggle('hide'); };
