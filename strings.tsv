@@ -1,0 +1,236 @@
+key	en	ru
+lang.en	English	Английский
+lang.ru	Russian	Русский
+ui.theme	Theme	Тема
+ui.theme.dark	Dark	Тёмная
+ui.theme.light	Light	Светлая
+ui.theme.auto	System	Как в системе
+ui.lang	Language	Язык
+ui.home	Home page	Главная страница
+chat.title	AI & Human · chat	AI & Human · чат
+chat.brand.sub	messenger	мессенджер
+chat.net.searching	looking for server…	ищу сервер…
+chat.ai.chats	AI chats	ИИ чаты
+chat.ai.new.title	new chat with a bot	новый чат с ботом
+chat.people	People	Люди
+chat.people.new.title	new dialog with a person	новый диалог с человеком
+chat.account	account	аккаунт
+chat.act.back	back to myself	вернуться к себе
+chat.pick.chat	pick a conversation	выберите переписку
+chat.typing	AI is thinking…	ИИ думает…
+chat.login.need	Sign in needed	Нужен вход
+chat.login.sub	The chat page lives on GitHub, the conversation lives on your home PC.	Страница чата живёт на GitHub, а переписка — на вашем домашнем ПК.
+chat.login.go	Sign in	Войти
+chat.login.retry	Check the connection again	Проверить связь ещё раз
+chat.new.bot	New chat with a bot	Новый чат с ботом
+chat.new.bot.hint	Pick a model. A preset sets the size and the steps of a picture.	Выберите модель. Пресет задаёт размер и шаги картинки.
+chat.models.loading	loading the model list…	загружаю список моделей…
+chat.cancel	Cancel	Отмена
+chat.create	Create	Создать
+chat.pictures	pictures	картинки
+chat.text	text	текст
+chat.new.pm	New dialog	Новый диалог
+chat.new.pm.hint	Pick a person. Only the two of you see a personal conversation.	Выберите человека. Личную переписку видят только двое.
+chat.people.loading	loading the people list…	загружаю список людей…
+chat.open	Open	Открыть
+chat.online	online	на связи
+chat.offline	offline	не в сети
+chat.settings.chat.title	Chat settings	Настройки чата
+chat.settings.bot.hint	This is a text model — a picture size is not needed.	Это текстовая модель — размер картинки не нужен.
+chat.temp	Temperature	Температура
+chat.temp.lo	0 — strict	0 — строго
+chat.temp.hi	2 — free	2 — свободно
+chat.len	Answer length	Длина ответа
+chat.close	Close	Закрыть
+chat.save	Save	Сохранить
+chat.settings.bot.title	Bot settings	Настройки бота
+chat.pic.hint	Picture size. Drag the slider — the other side adjusts so the frame does not get too narrow.	Размер картинки. Тяните ползунок — вторая сторона подстраивается, чтобы кадр не стал слишком узким.
+chat.width	Width	Ширина
+chat.height	Height	Высота
+chat.steps	Steps	Шаги
+chat.steps.lo	4 — fast	4 — быстро
+chat.steps.hi	24 — quality	24 — качество
+chat.menu	menu	меню
+chat.cfg.title	bot settings	настройки бота
+chat.attach	Attach a picture	Прикрепить картинку
+chat.ph.message	Message…	Сообщение…
+chat.send	send	отправить
+chat.err.noview	no access to this conversation	нет доступа к переписке
+chat.err.file	file unavailable	файл недоступен
+chat.net.down	server is not responding	сервер не отвечает
+chat.err.offline	Server is not online	Сервер не на связи
+chat.err.offline.hint	Turn on the PC («2. Server» window) — the page will find the new bridge address itself.	Включите ПК (окно «2. Сервер») — страница сама найдёт новый адрес моста.
+chat.net.up	server is online	сервер на связи
+chat.err.keydead	Sign-in no longer works	Вход больше не действует
+chat.err.keydead.hint	The key of this device was not accepted — sign in again.	Ключ этого устройства не принят — войдите заново.
+chat.err.link	Connection dropped	Связь оборвалась
+chat.err.link.hint	The page is looking for a new bridge address — wait a couple of seconds or press “Check the connection again”.	Страница ищет новый адрес моста — подождите пару секунд или нажмите «Проверить связь ещё раз».
+chat.act.as	you are acting as “	вы действуете от имени «
+chat.common	General chat	Общий чат
+chat.new.chat	New chat	Новый чат
+chat.untitled	untitled	без названия
+chat.pm	personal conversation	личная переписка
+chat.common.low	general chat	общий чат
+chat.ai	AI	ИИ
+chat.no.ai	no AI chats yet — press ＋	пока нет чатов с ИИ — нажмите ＋
+chat.no.people	no people yet — press ＋	пока нет людей — нажмите ＋
+chat.delete	delete	удалить
+chat.msg.deleted	message deleted	сообщение удалено
+chat.msg.failed	not sent — press to retry	не отправлено — нажмите, чтобы повторить
+chat.picture	picture	картинка
+chat.dl.original	download original (as uploaded)	скачать оригинал (как загружено)
+chat.share.pic	share the picture	поделиться картинкой
+chat.cache.dots	cache…	кэш…
+chat.sending	sending…	отправляю…
+chat.del.confirm	Delete the message? “message deleted” will stay in its place.	Удалить сообщение? На его месте останется «сообщение удалено».
+chat.err.delfail	not deleted	не удалилось
+chat.err.sendfail	not sent (HTTP	не отправилось (HTTP
+chat.err.offline.tap	no connection — tap the message to retry	нет связи — нажмите на сообщение, чтобы повторить
+chat.err.loading	the model is loading now — try again in half a minute	модель сейчас загружается — попробуйте через полминуты
+chat.err.noanswer	no answer (HTTP	ответа нет (HTTP
+chat.err.conn.drop	connection dropped	связь оборвалась
+chat.err.failed	failed	не получилось
+chat.copy.done	link key copied	ключ-ссылка скопирована
+chat.err.bigfile	File is larger than 24 MB	Файл больше 24 МБ
+chat.hash.count	counting the hash…	считаю хеш…
+chat.err.showfile	failed to show the file	не получилось показать файл
+chat.file.dup	that file was already here — shown without upload	такой файл уже был — показан без загрузки
+chat.err.readfile	could not read the file	не смог прочитать файл
+chat.err.upload	upload failed	не загрузилось
+chat.file.dup2	that file was already here — the ready one is shown	такой файл уже был — показан готовый
+chat.noconn	no connection	нет связи
+chat.uploading2	uploading…	загружаю…
+chat.err.signin	Sign in again — the key or password is outdated.	Войдите заново — ключ или пароль устарели.
+chat.err.oldserver	old server version — restart the “1. Neural networks” window	сервер старой версии — перезапустите окно «1. Нейросети»
+chat.err.conn.bridge	connection dropped — looking for the bridge	связь оборвалась — ищу мост
+chat.reconnect	restoring the connection…	восстанавливаю связь…
+chat.no.models	no models found	моделей не найдено
+chat.creating	creating…	создаю…
+chat.err.create	failed to create the chat	не получилось создать чат
+chat.no.people2	nobody here yet	пока никого нет
+chat.opening	opening…	открываю…
+chat.err.open	failed to open the conversation	не получилось открыть переписку
+chat.draft	Draft	Черновик
+chat.portrait	Portrait	Портрет
+chat.square	Square	Квадрат
+chat.saving	saving…	сохраняю…
+chat.sending.server	sending to the server…	отправляю на сервер…
+chat.saved.here	saved ✓ applies in this chat	сохранено ✓ действует в этом чате
+chat.saved	Saved	Сохранено
+chat.err.save	not saved (HTTP	не сохранилось (HTTP
+chat.err.conn.try	connection dropped — try again	связь оборвалась — попробуйте ещё раз
+chat.del.file2	”? The file goes to data\trash on the server.	»? Файл уедет в data\trash на сервере.
+chat.err.delfile	could not delete	не удалось удалить
+chat.deleted	deleted	удалено
+chat.act.back.done	You act as yourself again	вы снова работаете от своего имени
+chat.msgs	msgs	сообщ.
+chat.act.admin	admin	администратор
+chat.uploading	uploading 	загружаю 
+chat.steps.unit	 steps	 шагов
+chat.del.file1	Delete “	Удалить «
+chat.err.prefix	Failed: 	Не получилось: 
+chat.link.prefix	link: 	ссылка: 
+admin.title	Admin · AI and Human	Админка · AI and Human
+admin.brand	Admin	Админка
+admin.sec.server	Server	Сервер
+admin.sec.system	System	Система
+admin.sec.people	People	Люди
+admin.nav.people	People list	Список людей
+admin.back.chat	← to chat	← в чат
+admin.net.searching	looking for server…	ищу сервер…
+admin.cmd.title	Server commands	Команды серверу
+admin.cmd.hint	Commands run only after a captcha. After the server stops, this page stops answering — it can only be started again on the PC.	Команды выполняются только после капчи. После остановки сервера страница перестанет отвечать — запустить снова можно только на ПК.
+admin.cmd.stopgen	Stop generations	Остановить генерации
+admin.cmd.restart	Restart the server	Перезапустить сервер
+admin.cmd.stop	Stop the server	Остановить сервер
+admin.cmd.shutdown	Shut down the PC	Выключить ПК
+admin.cmd.cancel	Cancel shutdown	Отменить выключение
+admin.logs.title	Logs	Журналы
+admin.logs.hint	The last lines of a file from the logs folder. Auto-refresh every 5 seconds.	Последние строки файла из папки logs. Автообновление каждые 5 секунд.
+admin.refresh	Refresh	Обновить
+admin.auto	auto	авто
+admin.newacc.title	New account	Новая учётная запись
+admin.newacc.hint	Name, type and password. If the password is left empty, the server makes a random one — it is shown once.	Имя, тип и пароль. Если оставить пароль пустым, сервер выдаст случайный — он показывается один раз.
+admin.name	Name	Имя
+admin.type	Type	Тип
+admin.type.user	regular	обычный
+admin.type.admin	administrator	администратор
+admin.pass	Password	Пароль
+admin.create.go	Create account	Создать учётную запись
+admin.people.hint	A green dot means online now. Under the name — the id (8 digits) and the last sign-in time.	Зелёная точка — на связи сейчас. Под именем — id (8 цифр) и время последнего входа.
+admin.save.name	Save name	Сохранить имя
+admin.set.pass	Set password	Задать пароль
+admin.make.admin	Make admin	Сделать админом
+admin.make.user	Make regular	Сделать обычным
+admin.access	Access	Доступ
+admin.link.qr	Sign-in link (QR)	Ссылка на вход (QR)
+admin.kick	Kick from all devices	Выкинуть со всех устройств
+admin.act.as	Sign in as this person	Зайти от имени
+admin.misc	Service info	Служебное
+admin.cap.title	Confirmation	Подтверждение
+admin.cap.hint	Enter the digits from the picture — protection against a random click.	Введите цифры с картинки — защита от случайного нажатия.
+admin.cap.go	Run	Выполнить
+admin.cancel	Cancel	Отмена
+admin.login.need	Sign in needed	Нужен вход
+admin.login.sub	The admin page opens for the owner only. Sign in and come back here.	Админка открывается только владельцу. Войдите и вернитесь сюда.
+admin.login.go	Sign in	Войти
+admin.key.out	issuing the key…	выпускаю ключ…
+admin.copy.link	Copy the link	Скопировать ссылку
+admin.menu	menu	меню
+admin.ph.name	e.g. Maria	например, Мария
+admin.ph.pass	leave empty — the server will make a random one	оставьте пустым — сервер выдаст случайный
+admin.cap.alt	captcha	капча
+admin.cap.again	another picture	другая картинка
+admin.net.down	server is not responding	сервер не отвечает
+admin.net.offline	The server is not online. Turn on the PC — the page will find the new bridge address itself.	Сервер не на связи. Включите ПК — страница сама найдёт новый адрес моста.
+admin.net.up	server is online	сервер на связи
+admin.login.dead	Sign-in no longer works — sign in again.	Вход больше не действует — войдите заново.
+admin.login.notowner1	You signed in as “	Вы вошли как «
+admin.login.notowner2	”, but this is not the server owner.	», но это не владелец сервера.
+admin.signed	signed in	вошёл
+admin.cap.fail	Could not get the captcha:	Не удалось получить капчу:
+admin.cap.need4	Four digits are needed	Нужны четыре цифры
+admin.err.conn	connection dropped	связь оборвалась
+admin.cmd.done.stopgen	generations stopped	генерации остановлены
+admin.cmd.done.restart	the server is restarting (the window will close and open again)	сервер перезапускается (окно закроется и откроется заново)
+admin.cmd.done.stop	the server is stopping — the page will soon stop answering	сервер останавливается — страница скоро перестанет отвечать
+admin.cmd.done.shutdown	The PC shuts down in 60 seconds. Press “Cancel shutdown” in time.	ПК выключится через 60 секунд. Успейте нажать «Отменить выключение».
+admin.cmd.done.cancel	shutdown cancelled	выключение отменено
+admin.cmd.done	done	готово
+admin.cmd.note	Shutdown is scheduled 60 s ahead.	Выключение запланировано на 60 с вперёд.
+admin.cmd.restarting	the server is restarting…	сервер перезапускается…
+admin.kb	KB	КБ
+admin.empty	(empty)	(пусто)
+admin.never	never signed in	не заходил
+admin.ago.now	just now	только что
+admin.ago.min	min ago	мин назад
+admin.ago.hour	h ago	ч назад
+admin.ago.day	d ago	дн назад
+admin.err.list	could not get the list:	не удалось получить список:
+admin.updated	updated	обновлено
+admin.err.noname	enter a name	введите имя
+admin.creating	creating…	создаю…
+admin.err.fail	failed:	не вышло:
+admin.created	Created:	Создано:
+admin.created.pass	password:	пароль:
+admin.created.by.server	(made by the server)	(выдан сервером)
+admin.created.warn	Write the password down now — it will not be shown again.	Запишите пароль сейчас — второй раз он не покажется.
+admin.chats	chats	чатов
+admin.dot.admin	· admin	· админ
+admin.online.n	· online:	· на связи:
+admin.yes	yes	да
+admin.no	no	нет
+admin.last.in	· last sign-in:	· вход:
+admin.sessions	· sessions:	· сессий:
+admin.no.pass	· no password	· пароля нет
+admin.dialogs	dialogs:	диалогов:
+admin.pass.set	· password set:	· пароль задан:
+admin.last.key	· last key:	· последний ключ:
+admin.err.name.empty	the name cannot be empty	имя не может быть пустым
+admin.name.done	name changed — dialogs and pictures moved with the person	имя изменено — диалоги и картинки перенесены вместе с человеком
+admin.new.pass	New password:	Новый пароль:
+admin.kick.done	All sessions of this person are closed — they will sign in again.	Все сеансы этого человека закрыты — входит заново.
+admin.kick.confirm1	Close all sign-ins of “	Закрыть все входы «
+admin.kick.confirm2	” and kick them off their devices?	» и выбросить его с устройств?
+admin.kicked	kicked: sessions closed	выкинут: закрыто сеансов
+admin.copied	copied	скопировано
