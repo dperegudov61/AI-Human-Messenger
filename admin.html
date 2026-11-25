@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#0f1216">
 <title data-i18n="admin.title">Admin · AI and Human</title>
-<script src="theme.js" data-i18n="strings.tsv"></script>
+<script src="/ui/ui.js" data-i18n="strings.tsv"></script>
 <style>
 /* ---------- палитра: тёмная (по умолчанию) и светлая ----------
    Все цвета берутся только отсюда; тему переключает атрибут data-theme на <html>
-   (его ставит theme.js рядом с этим файлом — тот же, что у страницы чата). */
+   (его ставит общий шаблон /ui/ui.js — тот же, что у страницы чата). */
 :root{
   color-scheme:dark;
   --bg:#0f1216; --side:#151a20; --area:#141920; --code:#0b0e12;
@@ -54,7 +54,7 @@ nav a.it.on{background:var(--sel);outline:1px solid var(--line3)}
 nav .me{margin-top:auto;border-top:1px solid var(--line);padding:10px 12px;font-size:12.5px;color:var(--tx3)}
 nav .me b{display:block;color:var(--tx);font-weight:600}
 nav .me a{font-size:12px}
-nav .me .ui-sw{display:flex;margin:7px 0 9px}
+nav .me .uibar{display:flex;margin:7px 0 9px}
 main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
 header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--side)}
 #burger{display:none;background:none;border:0;color:var(--tx);font-size:20px;cursor:pointer;padding:0 4px}
@@ -129,8 +129,8 @@ pre.log{margin:0;max-height:52vh;overflow:auto;background:var(--code);border:1px
   <div class="sec" data-i18n="chat.people">People</div>
   <a class="it" data-p="ppl" data-i18n="admin.nav.people">People list</a>
   <div class="me">
-    <b id="mename">…</b>
-    <span class="ui-sw" data-ui="switch"></span>
+    <!-- шапка шаблона: логотип, тема, язык, аккаунт (рисует /ui/ui.js) -->
+    <div class="uibar" data-ui="bar"></div>
     <a href="index.html" data-i18n="admin.back.chat">← to chat</a>
   </div>
 </nav>
@@ -476,7 +476,7 @@ function verify() {
 }
 
 function start() {
-  $('mename').textContent = me || t("admin.signed", "signed in");
+  if (window.UI) UI.refresh();   // имя в кнопке аккаунта — из шаблона
   if (window.UI) UI.sync(base, tok);   // тема и язык — из настроек человека
   loadLogs();
   loadPeople();
